@@ -109,17 +109,8 @@ namespace NetworkCollapse
         }
 
         public void ToggleMenu() => OpenMenu(!menuOpen);
-        public void CloseGameWindow() => ShowTab("operations");
-        public void ShowInspector(bool show)
-        {
-            if (rightDock != null && !menuOpen) rightDock.style.display = show ? DisplayStyle.Flex : DisplayStyle.None;
-        }
 
         public void CloseGameWindow() => ShowTab("operations");
-        public void ShowInspector(bool show)
-        {
-            if (rightDock != null && !menuOpen) rightDock.style.display = show ? DisplayStyle.Flex : DisplayStyle.None;
-        }
 
         public void ShowInspector(bool show)
         {

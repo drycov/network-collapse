@@ -38,6 +38,7 @@ namespace NetworkCollapse
         public event Action<int> RivalAcquisitionRequested;
         public event Action<int, int> RivalNegotiationRequested;
         private Label worldMapLabel, bgpTableLabel;
+        private VisualElement geographicMap;
         public event Action<int> PartnerConnectionRequested;
         private string activeTab = "operations";
         private int previewMission = -1;
@@ -468,6 +469,29 @@ namespace NetworkCollapse
             marketTab.Add(Heading("МИРОВОЙ РЫНОК ISP", 15));
             marketSummary = Body(""); marketTab.Add(marketSummary);
             marketTab.Add(Heading("ГЕОГРАФИЯ / ГОРОДА", 14));
+            geographicMap = new VisualElement();
+            geographicMap.style.height = 180;
+            geographicMap.style.flexShrink = 0;
+            geographicMap.style.backgroundColor = new Color(.02f, .12f, .16f, 1f);
+            geographicMap.style.borderBottomWidth = 1;
+            geographicMap.style.borderBottomColor = new Color(.15f, .65f, .68f);
+            marketTab.Add(geographicMap);
+            for (int i = 0; i < world.Cities.Count; i++)
+            {
+                var city = world.Cities[i];
+                int index = i;
+                var point = new Button(() => CityExpansionRequested?.Invoke(index)) { text = "●" };
+                point.tooltip = city.Country + " / " + city.Name + " / " + city.Population + " жителей";
+                point.style.position = Position.Absolute;
+                point.style.left = Length.Percent(Mathf.Clamp(city.MapPosition.x / 70f * 100f, 3, 91));
+                point.style.top = Length.Percent(Mathf.Clamp(city.MapPosition.y / 33f * 100f, 5, 85));
+                point.style.width = 21; point.style.height = 21;
+                point.style.fontSize = 15;
+                point.style.paddingLeft = 0; point.style.paddingTop = 0;
+                point.style.backgroundColor = city.Coverage > 0 ? new Color(.06f, .4f, .3f) : new Color(.12f, .22f, .28f);
+                point.style.color = city.Coverage > 0 ? new Color(.52f, 1f, .72f) : new Color(.8f, .87f, .92f);
+                geographicMap.Add(point);
+            }
             worldMapLabel = Body(""); marketTab.Add(worldMapLabel);
             marketTab.Add(Heading("ГОРОДА И ПОКРЫТИЕ", 14));
             for (int i = 0; i < world.Cities.Count; i++)

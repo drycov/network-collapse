@@ -192,3 +192,14 @@ Responsive HUD docks now update only the left/right panels (rather than every ch
 ## HUD source modularization
 
 `NetworkHud` now uses C# `partial` source modules: `NetworkHud.WindowController.cs` owns modal navigation, `NetworkHud.Market.cs` owns market rendering, `NetworkHud.MissionController.cs` owns campaign briefing and mission switching, `NetworkHud.InspectorController.cs` owns selection/config interaction, `NetworkHud.MapController.cs` owns responsive layout and world-input hit tests, and `NetworkHud.SettingsController.cs` owns settings construction. `NetworkHud.cs` remains the MonoBehaviour composition root, shared UI construction and refresh. This incremental refactor preserves the API consumed by `NetworkGame`; it does **not** yet establish independently instantiable controllers or separate UXML assets. Source-level checks found no duplicate extracted method definitions. Compile and play mode verification in Unity Editor remain required.
+
+## UI Toolkit controller / UXML / USS migration
+
+The runtime HUD now loads UI Toolkit prefab/style assets via `Resources/NetworkUI`:
+
+- `HudWindowController` accepts the target visual root and a close callback. It instantiates `Window.uxml`, owns modal switching, and applies `Window.uss`.
+- `HudSettingsController` owns the `Settings.uxml` input controls and exposes volume/mute/performance events. `NetworkHud` persists preferences and forwards changes to game systems.
+- `HudMarketController`, `HudMissionController`, `HudInspectorController`, and `HudMapController` have explicit model providers and feature-specific UXML roots; the market and mission roots are now used by modal navigation. Their former large rendering/interaction logic remains in partial HUD modules until the next migration pass.
+- `NetworkHud.uss` provides shared styles; each view has a dedicated USS file. `HudViewAssets` resolves resources and attaches the relevant styles.
+
+The MonoBehaviour `NetworkHud` continues to compose controllers and preserve its existing public events/API to `NetworkGame`. This is a staged migration, **not yet a full removal of all partial classes**. Verify Unity import/compilation and play mode, particularly UXML field names and scroll navigation.

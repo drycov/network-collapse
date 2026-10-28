@@ -239,6 +239,30 @@ namespace NetworkCollapse
             // Purchased network sites are now integrated into the physical network; inherited failures require repair.
             return "Сеть " + rival.Name + " приобретена и интегрирована; +" + rival.Customers + " клиентов";
         }
+        public string DispatchSubsidiaryTeam(NetworkSimulation network, int index)
+        {
+            if (Subsidiaries == null || index < 0 || index >= Subsidiaries.Count) return "Подразделение не найдено";
+            var team = Subsidiaries[index];
+            if (team.TechnicalStaff <= 0) return "Нет доступных технических сотрудников";
+            int repaired = 0;
+            for (int i = 0; i < network.Nodes.Count && repaired < team.TechnicalStaff; i++)
+            {
+                var node = network.Nodes[i];
+                if (node.OriginOperator != team.Name || !node.Failed || node.RepairRemaining > 0f) continue;
+                if (network.StartNodeRepair(i)) repaired++;
+            }
+            for (int i = 0; i < network.Links.Count && repaired < team.TechnicalStaff; i++)
+            {
+                var link = network.Links[i];
+                if (!link.Failed || link.RepairRemaining > 0f) continue;
+                bool owned = network.Nodes[link.A].OriginOperator == team.Name ||
+                    network.Nodes[link.B].OriginOperator == team.Name;
+                if (owned && network.StartLinkRepair(i)) repaired++;
+            }
+            team.PendingRepairs = repaired;
+            return repaired > 0 ? "Бригада " + team.Name + ": ремонтных заданий " + repaired :
+                "Нет ремонтопригодных аварий либо не хватает бюджета";
+        }
         public string ConnectPartner(NetworkSimulation network, int index)
         {
             if (index < 0 || index >= Partners.Count) return "Оператор не найден";

@@ -286,7 +286,7 @@ namespace NetworkCollapse
             {
                 Vector3 pointer = cameraController.ScreenWorld(Input.mousePosition);
                 int hover = overPanel ? -1 : map.HitTest(pointer);
-                map.SetBuildPreview(hud.SelectedId, pointer, hover >= 0 ? hover : hud.TargetId);
+                map.SetBuildPreview(hud.SelectedId, pointer, hover >= 0 ? hover : hud.TargetId, hud.SelectedMedium, hud.SelectedSpeed);
             }
             else map.SetBuildPreview(-1, Vector3.zero);
 

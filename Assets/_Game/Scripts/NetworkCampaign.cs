@@ -75,6 +75,45 @@ namespace NetworkCollapse
 
         public event Action<string> Notification;
         public event Action<int> CreditsAwarded;
+        public event Action StateChanged;
+        [Serializable] public sealed class SaveData
+        {
+            public int Chapter, Rank, Reputation;
+            public List<int> MissionProgress = new List<int>();
+            public List<bool> MissionCompleted = new List<bool>();
+            public List<bool> AchievementUnlocked = new List<bool>();
+            public List<int> InventoryQuantities = new List<int>();
+        }
+        public SaveData Capture()
+        {
+            var save = new SaveData { Chapter = Chapter, Rank = Rank, Reputation = Reputation };
+            foreach (var m in Missions) { save.MissionProgress.Add(m.Progress); save.MissionCompleted.Add(m.Completed); }
+            foreach (var a in Achievements) save.AchievementUnlocked.Add(a.Unlocked);
+            foreach (var item in Inventory) save.InventoryQuantities.Add(item.Quantity);
+            return save;
+        }
+        public void Restore(SaveData save)
+        {
+            if (save == null) return;
+            Chapter = Math.Max(0, Math.Min(Missions.Count, save.Chapter));
+            Rank = Math.Max(1, save.Rank);
+            Reputation = Math.Max(0, save.Reputation);
+            for (int i = 0; i < Missions.Count && i < save.MissionProgress.Count; i++) Missions[i].Progress = Math.Max(0, save.MissionProgress[i]);
+            for (int i = 0; i < Missions.Count && i < save.MissionCompleted.Count; i++) Missions[i].Completed = save.MissionCompleted[i];
+            for (int i = 0; i < Achievements.Count && i < save.AchievementUnlocked.Count; i++) Achievements[i].Unlocked = save.AchievementUnlocked[i];
+            for (int i = 0; i < Inventory.Count && i < save.InventoryQuantities.Count; i++) Inventory[i].Quantity = Math.Max(0, save.InventoryQuantities[i]);
+            StateChanged?.Invoke();
+        }
+        public string MissionBoard()
+        {
+            var lines = new List<string>();
+            for (int i = 0; i < Missions.Count; i++)
+            {
+                var m = Missions[i];
+                lines.Add((m.Completed ? "[DONE] " : i == Chapter ? "[ACTIVE] " : "[LOCKED] ") + m.Title + " | +" + m.Reward + " кр.");
+            }
+            return string.Join("\n", lines);
+        }
 
         public NetworkCampaign()
         {
@@ -149,6 +188,7 @@ namespace NetworkCollapse
                 if (Reputation >= 3) Rank = Math.Max(Rank, 3);
                 else if (Reputation >= 1) Rank = Math.Max(Rank, 2);
                 Notification?.Invoke("Достижение: " + a.Title);
+                StateChanged?.Invoke();
                 if (Reputation >= 3) Award("rank3");
             }
         }
@@ -210,6 +250,7 @@ namespace NetworkCollapse
             }
 
             if (Current == null) Award("campaign");
+            StateChanged?.Invoke();
         }
 
         public bool UseItem(string id, NetworkSimulation simulation)
@@ -221,6 +262,7 @@ namespace NetworkCollapse
             if (amount == 0) return false;
 
             item.Quantity--;
+            StateChanged?.Invoke();
             simulation.GrantCredits(amount);
             Notification?.Invoke("Инвентарь: " + item.Name + " → +" + amount + " кр.");
             return true;

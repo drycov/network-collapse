@@ -136,3 +136,16 @@ A new game now starts as a small ISP: one core gateway, one aggregation switch, 
 Select a device to diagnose power, admin state, adjacent failed links and routes. **NOC / Scan entire network** lists the first six outages, congestion warnings and construction jobs. Existing node/link repairs remain player controlled, with their own costs and timers. Expansions and customer growth are captured by the network snapshot.
 
 Current limitations: abstract geometry in game units (not a geographic world map), no real subscriber address/contract entities or churn, no field-service dispatch automations, no realistic financial ledger or international peering simulation. Unity Editor compile and visual tests are still required.
+
+## World market / competitors / interconnection
+
+The **РЫНОК** HUD tab introduces a fictional city economy and ISP expansion:
+- **Cities and territory:** open coverage in domestic cities and a foreign city. International expansion requires an active International Carrier contract.
+- **Tariff contracts:** three starter tariffs (50/100/500 Mbps) and city-level customer batches; acquisition consumes budget and the access layer must have spare capacity. Subscribers add simplified billing income.
+- **Competitors:** MetroNet, FiberUnion and BorderLink can be acquired via a legal market transaction. Price, operator reputation and migration capacity gate acquisition. This is **not hacking, hostile network takeover or real-world intrusion**; acquired assets and subscribers join the player business.
+- **Transit/peering:** simulated carrier/IX agreements carry autonomous system numbers and recurring fees. The game uses private ASN 64512 and fictitious counterpart ASNs. This is a commercial BGP-inspired abstraction; there is **no real BGP FSM, RIB, route advertisements, AS-path selection or actual Internet transit** yet.
+- **International links:** foreign coverage and international carrier contracts are tracked as campaign progression; geographic fiber paths and cross-border capacity engineering are not implemented.
+
+World market is saved separately as `NetworkCollapse.World.v1` (Unity PlayerPrefs JSON), restored alongside the physical network, and deleted when creating a new shift. Advancing the game level preserves constructed and expanded infrastructure instead of recreating the starting graph.
+
+Limitations: initial geography and rivals are authored data rather than procedural geopolitical world generation; acquisition is all-or-nothing with no negotiations; no regulatory approval, antitrust, recurring competitive AI, individual customer records, actual BGP protocol, route policy, or executable attack mechanics. Validate in Unity Editor before use.

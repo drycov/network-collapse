@@ -12,6 +12,7 @@ namespace NetworkCollapse
         private float elapsed;
         private bool selectingTarget;
         private NetworkCampaign campaign;
+        private NetworkAudio audio;
         private bool incidentPending;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -34,6 +35,7 @@ namespace NetworkCollapse
             if (cameraController == null)
                 cameraController = cam.gameObject.AddComponent<NetworkCameraController>();
 
+            audio = new GameObject("Network Audio").AddComponent<NetworkAudio>();
             map = new GameObject("Network Map").AddComponent<NetworkMapView>();
             hud = new GameObject("Network HUD").AddComponent<NetworkHud>();
             hud.DeviceAction += OnDeviceAction;
@@ -45,6 +47,7 @@ namespace NetworkCollapse
                 simulation.StartIncident(type);
                 incidentPending = true;
                 hud.AddEvent("Сценарий: " + type);
+                audio.Play(SoundCue.Alert);
                 Refresh();
             };
             hud.BuildLinkRequested += (a, b) =>
@@ -53,6 +56,7 @@ namespace NetworkCollapse
                 {
                     hud.AddEvent($"Канал N{a:00}–N{b:00} построен");
                     campaign.OnAction(MissionKind.BuildLink);
+                    audio.Play(SoundCue.LinkBuilt);
                     map.SetBuildPreview(-1, Vector3.zero);
                     hud.Select(a);
                     map.SetSelected(a);
@@ -65,6 +69,7 @@ namespace NetworkCollapse
                 {
                     hud.AddEvent("Модернизирован канал #" + id);
                     campaign.OnAction(MissionKind.UpgradeLink);
+                    audio.Play(SoundCue.Confirm);
                     Refresh();
                 }
             };
@@ -74,6 +79,7 @@ namespace NetworkCollapse
                 {
                     hud.AddEvent("Ремонт канала #" + id + " начат");
                     campaign.OnAction(MissionKind.RepairDevice);
+                    audio.Play(SoundCue.Repair);
                     Refresh();
                 }
             };
@@ -111,7 +117,7 @@ namespace NetworkCollapse
         {
             simulation = new NetworkSimulation();
             campaign = new NetworkCampaign();
-            campaign.Notification += message => hud.AddEvent(message);
+            campaign.Notification += message => { hud.AddEvent(message); audio.Play(message.StartsWith("Достижение:") ? SoundCue.Achievement : SoundCue.Mission); };
             campaign.CreditsAwarded += amount => simulation.GrantCredits(amount);
             incidentPending = false;
             selectingTarget = false;
@@ -218,6 +224,7 @@ namespace NetworkCollapse
                     {
                         map.SetSelected(id);
                         hud.Select(id);
+                        audio.Play(SoundCue.Select);
                         map.HighlightRoute(id);
                     }
                     else
@@ -227,6 +234,7 @@ namespace NetworkCollapse
                         {
                             map.SetSelectedLink(linkId);
                             hud.SelectLink(linkId);
+                            audio.Play(SoundCue.Select);
                             map.HighlightRoute(-1);
                         }
                     }
@@ -236,6 +244,7 @@ namespace NetworkCollapse
 
         private void OnDestroy()
         {
+            if (audio != null) Destroy(audio.gameObject);
             if (hud != null) Destroy(hud.gameObject);
             if (map != null) Destroy(map.gameObject);
         }

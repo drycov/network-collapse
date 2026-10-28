@@ -15,6 +15,12 @@ namespace NetworkCollapse
         private Label endingTitle, endingDescription;
         private ProgressBar availabilityBar, objectiveBar, inspectorLoad;
         private Button pauseButton;
+        private VisualElement mainMenu, mainMenuCard, leftDock, rightDock;
+        private bool menuOpen;
+        public bool MenuOpen => menuOpen;
+        public event Action ContinueGameRequested;
+        public event Action NewGameRequested;
+        public event Action QuitGameRequested;
         private VisualElement dialogueOverlay, settingsTab;
         private Label tutorialLabel, briefingText;
         private Slider volumeSlider;
@@ -118,7 +124,7 @@ namespace NetworkCollapse
             statusBar.style.marginLeft = 12;
             statusBar.style.marginTop = 8;
             top.Add(statusBar);
-            root.Add(top);
+            top.Add(ActionButton("МЕНЮ", () => OpenMenu(true)));
             alertBanner = Heading("", 12);
             alertBanner.style.position = Position.Absolute;
             alertBanner.style.top = 45;
@@ -131,6 +137,7 @@ namespace NetworkCollapse
             root.Add(alertBanner);
 
             var left = Panel(328);
+            leftDock = left;
             root.Add(left);
             left.Add(Heading("NETWORK COLLAPSE", 20));
             left.Add(Heading("ACCESS NETWORK OPS", 11));
@@ -240,6 +247,7 @@ namespace NetworkCollapse
             operationsTab.Add(Body("ЛКМ — узел/канал\nСтроительство — два узла\nПКМ/СКМ — панорама · F — центр"));
 
             var right = Panel(338);
+            rightDock = right;
             root.Add(right);
             title = Heading("ОБОРУДОВАНИЕ", 19);
             right.Add(title);
@@ -297,6 +305,28 @@ namespace NetworkCollapse
             endingDescription = Body(""); endingOverlay.Add(endingDescription);
             endingOverlay.Add(ActionButton("НАЧАТЬ НОВУЮ СМЕНУ", () => ResetRequested?.Invoke()));
             root.Add(endingOverlay);
+            mainMenu = new VisualElement();
+            mainMenu.style.position = Position.Absolute;
+            mainMenu.style.left = 0; mainMenu.style.right = 0;
+            mainMenu.style.top = 0; mainMenu.style.bottom = 0;
+            mainMenu.style.backgroundColor = new Color(.006f, .025f, .04f, .97f);
+            mainMenu.style.justifyContent = Justify.Center;
+            mainMenu.style.alignItems = Align.Center;
+            mainMenuCard = new VisualElement();
+            mainMenuCard.style.width = 440;
+            mainMenuCard.style.maxWidth = Length.Percent(90);
+            mainMenuCard.style.paddingTop = 30; mainMenuCard.style.paddingBottom = 30;
+            mainMenuCard.style.paddingLeft = 32; mainMenuCard.style.paddingRight = 32;
+            mainMenuCard.style.backgroundColor = new Color(.025f, .1f, .13f, 1f);
+            mainMenuCard.style.borderLeftWidth = 3;
+            mainMenuCard.style.borderLeftColor = new Color(.27f, .82f, .75f);
+            mainMenuCard.Add(Heading("NETWORK COLLAPSE", 28));
+            mainMenuCard.Add(Body("ISP STRATEGY  /  OPERATIONS & EXPANSION"));
+            mainMenuCard.Add(ActionButton("ПРОДОЛЖИТЬ КАМПАНИЮ", () => { ContinueGameRequested?.Invoke(); OpenMenu(false); }));
+            mainMenuCard.Add(ActionButton("НОВАЯ ИГРА", () => { NewGameRequested?.Invoke(); OpenMenu(false); }));
+            mainMenuCard.Add(ActionButton("НАСТРОЙКИ", () => { OpenMenu(false); ShowTab("settings"); }));
+            mainMenuCard.Add(ActionButton("ВЫЙТИ ИЗ ИГРЫ", () => QuitGameRequested?.Invoke()));
+            mainMenu.Add(mainMenuCard); root.Add(mainMenu);
             dialogueOverlay = new VisualElement();
             dialogueOverlay.style.position = Position.Absolute;
             dialogueOverlay.style.left = Length.Percent(24);
@@ -327,6 +357,7 @@ namespace NetworkCollapse
             footerStatus.style.unityTextAlign = TextAnchor.MiddleCenter;
             root.Add(footerStatus);
             ShowTab(activeTab);
+            OpenMenu(menuOpen);
             Refresh();
             if (eventLog != null) eventLog.text = string.Join("\n", events);
         }
@@ -423,6 +454,19 @@ namespace NetworkCollapse
             button.style.fontSize = 10;
             button.style.marginRight = 3;
             return button;
+        }
+
+        public void OpenMenu(bool open)
+        {
+            menuOpen = open;
+            if (mainMenu != null) mainMenu.style.display = open ? DisplayStyle.Flex : DisplayStyle.None;
+            if (leftDock != null) leftDock.style.display = open ? DisplayStyle.None : DisplayStyle.Flex;
+            if (rightDock != null) rightDock.style.display = open ? DisplayStyle.None : DisplayStyle.Flex;
+        }
+        public void ToggleMenu() => OpenMenu(!menuOpen);
+        public void ShowInspector(bool show)
+        {
+            if (rightDock != null && !menuOpen) rightDock.style.display = show ? DisplayStyle.Flex : DisplayStyle.None;
         }
 
         public void SetTutorial(string instruction)

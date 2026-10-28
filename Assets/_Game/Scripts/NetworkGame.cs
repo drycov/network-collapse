@@ -13,6 +13,14 @@ namespace NetworkCollapse
         private bool selectingTarget;
         private bool paused;
         private NetworkCampaign campaign;
+        private IspWorld world;
+        private const string WorldSaveKey = "NetworkCollapse.World.v1";
+        private void MarketAction(string message, bool topologyChanged = false)
+        {
+            hud.AddEvent(message);
+            if (topologyChanged) { map.Initialize(simulation); cameraController.FrameNetwork(simulation); hud.Select(-1); }
+            hud.Refresh(); SaveCampaign();
+        }
         private NetworkAudio audio;
         private bool incidentPending;
         private int lastVoicedChapter = -1;
@@ -25,6 +33,7 @@ namespace NetworkCollapse
         {
             if (campaign == null) return;
             PlayerPrefs.SetString(SaveKey, JsonUtility.ToJson(campaign.Capture()));
+            if (world != null) PlayerPrefs.SetString(WorldSaveKey, JsonUtility.ToJson(world));
             if (simulation != null) PlayerPrefs.SetString(NetworkSaveKey, JsonUtility.ToJson(simulation.Capture()));
             PlayerPrefs.Save();
         }
@@ -65,6 +74,10 @@ namespace NetworkCollapse
             map = new GameObject("Network Map").AddComponent<NetworkMapView>();
             hud = new GameObject("Network HUD").AddComponent<NetworkHud>();
             hud.DeviceAction += OnDeviceAction;
+            hud.CityExpansionRequested += i => MarketAction(world.OpenCity(simulation, i), true);
+            hud.ContractRequested += (city, tariff) => MarketAction(world.SignCustomers(simulation, city, tariff));
+            hud.RivalAcquisitionRequested += i => MarketAction(world.AcquireRival(simulation, i), true);
+            hud.PartnerConnectionRequested += i => MarketAction(world.ConnectPartner(simulation, i));
             hud.ExpandNetworkRequested += () =>
             {
                 if (simulation.ExpandNetwork())
@@ -181,8 +194,14 @@ namespace NetworkCollapse
             paused = false;
             bool restore = restoreOnNextReset;
             restoreOnNextReset = false;
-            if (!restore) { PlayerPrefs.DeleteKey(NetworkSaveKey); PlayerPrefs.DeleteKey(SaveKey); }
+            if (!restore) { PlayerPrefs.DeleteKey(NetworkSaveKey); PlayerPrefs.DeleteKey(SaveKey); PlayerPrefs.DeleteKey(WorldSaveKey); }
             simulation = new NetworkSimulation();
+            world = IspWorld.Create();
+            if (restore && PlayerPrefs.HasKey(WorldSaveKey))
+            {
+                try { var loaded = JsonUtility.FromJson<IspWorld>(PlayerPrefs.GetString(WorldSaveKey)); if (loaded != null && loaded.Cities != null && loaded.Tariffs != null) world = loaded; }
+                catch (System.Exception ex) { Debug.LogWarning("World save rejected: " + ex.Message); }
+            }
             firstRunTutorial = !PlayerPrefs.HasKey("NetworkCollapse.TutorialSeen");
             tutorialStep = 0;
             if (restore && PlayerPrefs.HasKey(NetworkSaveKey))
@@ -201,6 +220,7 @@ namespace NetworkCollapse
             map.Initialize(simulation);
             hud.Initialize(simulation);
             hud.SetCampaign(campaign);
+            hud.SetWorld(world);
             hud.Select(-1);
             hud.SetPaused(false);
             hud.SetTutorial(firstRunTutorial ? "ОБУЧЕНИЕ 1/3: Выберите любой узел сети на карте." : "");
@@ -264,6 +284,7 @@ namespace NetworkCollapse
                 elapsed -= 2f;
                 simulation.Step(2f);
                 campaign.OnTick(simulation);
+                world.Tick(simulation);
                 if (campaign.Chapter != lastVoicedChapter)
                 {
                     lastVoicedChapter = campaign.Chapter;

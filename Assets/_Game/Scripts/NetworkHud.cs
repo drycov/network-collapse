@@ -50,7 +50,7 @@ namespace NetworkCollapse
         private int marketCityIndex;
         private VisualElement geographicMap;
         private VisualElement windowLayer, currentWindow;
-        private VisualElement hudHeader, hudAlert;
+        private VisualElement hudAlert;
         private float lastLayoutWidth = -1f;
         public bool HasWindowOpen => windowLayer != null && windowLayer.style.display == DisplayStyle.Flex;
         private ScrollView windowContent;
@@ -89,10 +89,14 @@ namespace NetworkCollapse
 
         public bool IsPointerOverHud(Vector2 screen)
         {
-            if (menuOpen || (windowLayer != null && windowLayer.resolvedStyle.display != DisplayStyle.None)) return true;
-            bool inspectorVisible = rightDock != null && rightDock.resolvedStyle.display != DisplayStyle.None;
-            return screen.y > Screen.height - 52 || screen.x < (Screen.width < 1100 ? Mathf.Clamp(Screen.width * .24f, 195, 270) + 18 : 350) ||
-                   (inspectorVisible && screen.x > Screen.width - (Screen.width < 1100 ? Mathf.Clamp(Screen.width * .24f, 195, 270) + 18 : 360));
+            if (menuOpen || (windowLayer != null && windowLayer.resolvedStyle.display != DisplayStyle.None))
+                return true;
+            float leftWidth = leftDock != null && leftDock.resolvedStyle.display != DisplayStyle.None
+                ? leftDock.resolvedStyle.width + 16f : 0f;
+            float rightWidth = rightDock != null && rightDock.resolvedStyle.display != DisplayStyle.None
+                ? rightDock.resolvedStyle.width + 16f : 0f;
+            return screen.y > Screen.height - 65f ||
+                screen.x < leftWidth || screen.x > Screen.width - rightWidth;
         }
 
         public void Initialize(NetworkSimulation simulation)

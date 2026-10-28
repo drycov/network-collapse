@@ -29,6 +29,7 @@ namespace NetworkCollapse
         public event Action<bool> MuteChanged;
         public event Action<bool> PerformanceModeChanged;
         public event Action PauseRequested;
+        public event Action MenuRequested;
         private Button repair, failure, build, upgrade, repairLink, nextLevel;
         private Label connectionInfo, eventLog, missionLabel, storyLabel, achievementLabel, inventoryLabel, boardLabel, incidentLabel, dialogueLabel;
         public event Action<int> UpgradeDeviceRequested;
@@ -124,7 +125,7 @@ namespace NetworkCollapse
             statusBar.style.marginLeft = 12;
             statusBar.style.marginTop = 8;
             top.Add(statusBar);
-            var menuButton = ActionButton("☰  МЕНЮ", () => { OpenMenu(true); PauseRequested?.Invoke(); });
+            var menuButton = ActionButton("МЕНЮ", () => MenuRequested?.Invoke());
             menuButton.style.position = Position.Absolute;
             menuButton.style.right = 10;
             menuButton.style.top = 2;
@@ -466,6 +467,7 @@ namespace NetworkCollapse
         {
             menuOpen = open;
             if (mainMenu != null) mainMenu.style.display = open ? DisplayStyle.Flex : DisplayStyle.None;
+            if (dialogueOverlay != null && open) dialogueOverlay.style.display = DisplayStyle.None;
             if (leftDock != null) leftDock.style.display = open ? DisplayStyle.None : DisplayStyle.Flex;
             if (rightDock != null) rightDock.style.display = open || (SelectedId < 0 && SelectedLinkId < 0 && !BuildMode) ? DisplayStyle.None : DisplayStyle.Flex;
         }

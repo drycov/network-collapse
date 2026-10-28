@@ -214,6 +214,8 @@ namespace NetworkCollapse
             panel.style.flexShrink = 0;
             // Fully opaque terminal panels (no alpha glass)
             panel.style.backgroundColor = new Color(.012f, .05f, .07f, 1f);
+            var skinPanel = Resources.Load<Texture2D>("NetworkTheme/skin_panel");
+            if (skinPanel != null) panel.style.backgroundImage = new StyleBackground(skinPanel);
             panel.style.borderLeftWidth = 3;
             panel.style.borderLeftColor = new Color(.10f, .65f, .72f);
             panel.style.borderTopWidth = 1;
@@ -256,6 +258,8 @@ namespace NetworkCollapse
             button.style.flexShrink = 0;
             button.style.marginBottom = 7;
             button.style.backgroundColor = new Color(.04f, .16f, .19f, 1f);
+            var skinButton = Resources.Load<Texture2D>("NetworkTheme/skin_button");
+            if (skinButton != null) button.style.backgroundImage = new StyleBackground(skinButton);
             button.style.color = new Color(.55f, 1f, .87f);
             button.style.borderLeftWidth = 2;
             button.style.borderLeftColor = new Color(.13f, .77f, .68f);

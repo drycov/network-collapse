@@ -291,38 +291,29 @@ namespace NetworkCollapse
                 var path = FindOptimalPath(source, 0, sender.Demand);
                 if (path == null || path.Count == 0) continue;
 
+                // Prefer a disjoint alternate when available. Split demand across two paths
+                // only when both can carry the half-flow; otherwise use the primary.
+                var backup = FindOptimalPath(source, 0, sender.Demand * .5f, path);
+                bool split = backup != null && backup.Count > 0;
+                float primaryAmount = split ? sender.Demand * .5f : sender.Demand;
+                float backupAmount = split ? sender.Demand - primaryAmount : 0f;
                 bool enough = true;
                 foreach (int li in path)
-                {
-                    if (Links[li].Failed || Links[li].Load + sender.Demand > Links[li].Capacity)
-                    {
-                        enough = false;
-                        break;
-                    }
-                }
+                    if (Links[li].Failed || Links[li].Load + primaryAmount > Links[li].Capacity) enough = false;
+                if (split) foreach (int li in backup)
+                    if (Links[li].Failed || Links[li].Load + backupAmount > Links[li].Capacity) enough = false;
                 if (!enough) continue;
 
                 PrimaryPaths[source] = new List<int>(path);
-                PrimaryTraffic[source] = sender.Demand;
-                var alternate = FindOptimalPath(source, 0, sender.Demand, path);
-                if (alternate != null) BackupPaths[source] = alternate;
-                sender.Load = sender.Demand;
-                int prev = source;
-                foreach (int li in path)
+                PrimaryTraffic[source] = primaryAmount;
+                if (split)
                 {
-                    var link = Links[li];
-                    link.Load += sender.Demand;
-                    if (link.A == prev)
-                    {
-                        link.FlowAB += sender.Demand;
-                        prev = link.B;
-                    }
-                    else
-                    {
-                        link.FlowAB -= sender.Demand;
-                        prev = link.A;
-                    }
+                    BackupPaths[source] = new List<int>(backup);
+                    BackupTraffic[source] = backupAmount;
                 }
+                sender.Load = sender.Demand;
+                RecordFlow(path, source, primaryAmount);
+                if (split) RecordFlow(backup, source, backupAmount);
                 Nodes[0].Load += sender.Demand;
                 delivered += sender.Demand;
             }
@@ -416,6 +407,18 @@ namespace NetworkCollapse
 
         public List<int> FindDisplayRoute(int source) =>
             source > 0 && source < Nodes.Count ? FindOptimalPath(source, 0, Nodes[source].Demand) : null;
+
+        private void RecordFlow(List<int> path, int source, float amount)
+        {
+            int previous = source;
+            foreach (int index in path)
+            {
+                var link = Links[index];
+                link.Load += amount;
+                if (link.A == previous) { link.FlowAB += amount; previous = link.B; }
+                else { link.FlowAB -= amount; previous = link.A; }
+            }
+        }
 
         private void RebuildDerivedTables()
         {

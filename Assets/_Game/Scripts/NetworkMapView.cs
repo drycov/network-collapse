@@ -25,6 +25,8 @@ namespace NetworkCollapse
         private int secondSelected = -1;
         private int selectedLink = -1;
         private float clock;
+        private EquipmentTier? visibleTier;
+        public void SetTierFilter(EquipmentTier? tier) { visibleTier = tier; Refresh(); }
 
         public int SelectedNode => selected;
         public int SelectedLink => selectedLink;
@@ -111,7 +113,7 @@ namespace NetworkCollapse
         {
             if (simulation == null) return -1;
             for (int i = 0; i < simulation.Nodes.Count; i++)
-                if (Vector2.Distance(simulation.Nodes[i].Position, new Vector2(world.x, world.y)) < threshold)
+                if ((!visibleTier.HasValue || simulation.Nodes[i].Tier == visibleTier.Value) && Vector2.Distance(simulation.Nodes[i].Position, new Vector2(world.x, world.y)) < threshold)
                     return i;
             return -1;
         }
@@ -164,7 +166,9 @@ namespace NetworkCollapse
                 else
                     c = new Color(.21f, .88f, .73f);
 
+                bool visible = !visibleTier.HasValue || node.Tier == visibleTier.Value;
                 nodeViews[i].Sprite.color = c;
+                nodeViews[i].Root.gameObject.SetActive(visible);
                 nodeViews[i].Halo.enabled = i == selected || i == secondSelected;
                 nodeViews[i].Halo.color = i == secondSelected
                     ? new Color(1f, .75f, .19f, .5f)

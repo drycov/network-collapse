@@ -22,7 +22,7 @@ namespace NetworkCollapse
             foreach (var panel in new[] { missionsTab, inventoryTab, marketTab, settingsTab })
                 if (panel != null) panel.style.display = DisplayStyle.None;
             if (windowLayer == null) return;
-            if (tab == "market" && world != null) RenderMarket();
+            if (tab == "market" && marketController != null) marketController.Refresh();
             if (tab == "operations")
             {
                 windowController.Hide(true);

@@ -28,9 +28,9 @@ namespace NetworkCollapse
                 windowController.Hide(true);
                 return;
             }
-            VisualElement content = tab == "missions" ? missionsTab :
+            VisualElement content = tab == "missions" ? (missionController != null ? missionController.Root : missionsTab) :
                 tab == "inventory" ? inventoryTab :
-                tab == "market" ? marketTab : settingsTab;
+                tab == "market" ? (marketController != null ? marketController.Root : marketTab) : settingsTab;
             if (content == null) return;
             // Reparent only when switching screens; avoid resetting scroll position on redundant calls.
             if (windowContent.childCount == 1 && windowContent[0] == content)

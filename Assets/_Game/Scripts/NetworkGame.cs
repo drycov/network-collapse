@@ -14,6 +14,7 @@ namespace NetworkCollapse
         private NetworkCampaign campaign;
         private NetworkAudio audio;
         private bool incidentPending;
+        private int lastVoicedChapter = -1;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void Launch()
@@ -128,6 +129,8 @@ namespace NetworkCollapse
             hud.Select(-1);
             hud.AddEvent("Диспетчерская запущена · " + campaign.ChapterTitle);
             hud.AddEvent(campaign.StoryBriefing);
+            lastVoicedChapter = campaign.Chapter;
+            audio.PlayVoice("mission_" + (campaign.Chapter + 1));
             cameraController.ResetView();
         }
 
@@ -179,6 +182,11 @@ namespace NetworkCollapse
                 elapsed -= 2f;
                 simulation.Step(2f);
                 campaign.OnTick(simulation);
+                if (campaign.Chapter != lastVoicedChapter)
+                {
+                    lastVoicedChapter = campaign.Chapter;
+                    if (!audio.PlayVoice("mission_" + (campaign.Chapter + 1))) audio.Play(SoundCue.Mission);
+                }
                 if (incidentPending && !simulation.GameOver && simulation.Availability >= 0.60f)
                 {
                     campaign.OnAction(MissionKind.SurviveIncident);

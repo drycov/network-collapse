@@ -15,6 +15,23 @@ namespace NetworkCollapse
         private NetworkAudio audio;
         private bool incidentPending;
         private int lastVoicedChapter = -1;
+        private const string SaveKey = "NetworkCollapse.Campaign.v1";
+        private void SaveCampaign()
+        {
+            if (campaign == null) return;
+            PlayerPrefs.SetString(SaveKey, JsonUtility.ToJson(campaign.Capture()));
+            PlayerPrefs.Save();
+        }
+        private void LoadCampaign()
+        {
+            if (!PlayerPrefs.HasKey(SaveKey)) return;
+            try
+            {
+                var saved = JsonUtility.FromJson<NetworkCampaign.SaveData>(PlayerPrefs.GetString(SaveKey));
+                campaign.Restore(saved);
+            }
+            catch (System.Exception ex) { Debug.LogWarning("Campaign save rejected: " + ex.Message); }
+        }
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void Launch()
@@ -85,9 +102,10 @@ namespace NetworkCollapse
                 }
             };
             hud.NextLevelRequested += OnNextLevel;
+            hud.UpgradeDeviceRequested += id => { if (simulation.UpgradeDevice(id)) { hud.AddEvent("Оборудование модернизировано: N" + id); audio.Play(SoundCue.Confirm); Refresh(); } };
             hud.UseInventoryRequested += id =>
             {
-                if (campaign.UseItem(id, simulation)) Refresh();
+                if (campaign.UseItem(id, simulation)) { SaveCampaign(); Refresh(); }
             };
             hud.ConfigureDeviceRequested += (id, vlan, mtu, enabled, routing) =>
             {
@@ -120,6 +138,8 @@ namespace NetworkCollapse
             campaign = new NetworkCampaign();
             campaign.Notification += message => { hud.AddEvent(message); audio.Play(message.StartsWith("Достижение:") ? SoundCue.Achievement : SoundCue.Mission); };
             campaign.CreditsAwarded += amount => simulation.GrantCredits(amount);
+            campaign.StateChanged += SaveCampaign;
+            LoadCampaign();
             incidentPending = false;
             selectingTarget = false;
             elapsed = 0f;
@@ -252,6 +272,7 @@ namespace NetworkCollapse
 
         private void OnDestroy()
         {
+            SaveCampaign();
             if (audio != null) Destroy(audio.gameObject);
             if (hud != null) Destroy(hud.gameObject);
             if (map != null) Destroy(map.gameObject);

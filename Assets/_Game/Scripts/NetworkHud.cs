@@ -10,7 +10,7 @@ namespace NetworkCollapse
         private UIDocument document;
         private PanelSettings panelSettings;
         private ThemeStyleSheet runtimeTheme;
-        private Label kpis, details, title, objectiveLabel;
+        private Label kpis, details, title, objectiveLabel, statusBar;
         private Button repair, failure, build, upgrade, repairLink, nextLevel;
         private Label connectionInfo, eventLog;
         private Button modeButton;
@@ -62,11 +62,26 @@ namespace NetworkCollapse
             root.style.flexDirection = FlexDirection.Row;
             root.style.justifyContent = Justify.SpaceBetween;
             root.style.height = Length.Percent(100);
-            root.style.paddingTop = 14;
+            root.style.paddingTop = 50;
             root.style.paddingBottom = 14;
             root.style.paddingLeft = 14;
             root.style.paddingRight = 14;
             root.pickingMode = PickingMode.Ignore;
+            var top = new VisualElement();
+            top.style.position = Position.Absolute;
+            top.style.left = 14;
+            top.style.right = 14;
+            top.style.top = 8;
+            top.style.height = 34;
+            top.style.backgroundColor = new Color(.035f, .13f, .18f, .97f);
+            top.style.borderBottomWidth = 1;
+            top.style.borderBottomColor = new Color(.13f, .72f, .78f);
+            top.pickingMode = PickingMode.Ignore;
+            statusBar = Heading("NETWORK COLLAPSE   /   OPERATIONS CONSOLE   /   SECURE LINK", 13);
+            statusBar.style.marginLeft = 12;
+            statusBar.style.marginTop = 7;
+            top.Add(statusBar);
+            root.Add(top);
 
             var left = Panel(290);
             root.Add(left);
@@ -142,16 +157,24 @@ namespace NetworkCollapse
             panel.style.paddingTop = 17;
             panel.style.paddingBottom = 17;
             panel.style.maxHeight = Length.Percent(96);
-            panel.style.backgroundColor = new Color(.045f, .073f, .12f, .94f);
-            panel.style.borderTopLeftRadius = panel.style.borderTopRightRadius = 12;
-            panel.style.borderBottomLeftRadius = panel.style.borderBottomRightRadius = 12;
+            panel.style.backgroundColor = new Color(.017f, .065f, .09f, .96f);
+            panel.style.borderLeftWidth = 2;
+            panel.style.borderLeftColor = new Color(.10f, .65f, .72f);
+            panel.style.borderTopWidth = 1;
+            panel.style.borderTopColor = new Color(.08f, .39f, .48f);
+            panel.style.borderRightWidth = 1;
+            panel.style.borderRightColor = new Color(.08f, .39f, .48f);
+            panel.style.borderBottomWidth = 1;
+            panel.style.borderBottomColor = new Color(.08f, .39f, .48f);
+            panel.style.borderTopLeftRadius = panel.style.borderTopRightRadius = 2;
+            panel.style.borderBottomLeftRadius = panel.style.borderBottomRightRadius = 2;
             return panel;
         }
 
         private static Label Heading(string text, int size)
         {
             var label = new Label(text);
-            label.style.color = new Color(.52f, .86f, 1f);
+            label.style.color = new Color(.37f, .96f, .86f);
             label.style.fontSize = size;
             label.style.unityFontStyleAndWeight = FontStyle.Bold;
             label.style.marginBottom = 12;
@@ -161,7 +184,7 @@ namespace NetworkCollapse
         private static Label Body(string text)
         {
             var label = new Label(text);
-            label.style.color = new Color(.85f, .92f, 1f);
+            label.style.color = new Color(.68f, .84f, .83f);
             label.style.fontSize = 13;
             label.style.whiteSpace = WhiteSpace.Normal;
             label.style.marginBottom = 12;
@@ -173,8 +196,14 @@ namespace NetworkCollapse
             var button = new Button(action) { text = text };
             button.style.height = 36;
             button.style.marginBottom = 8;
-            button.style.backgroundColor = new Color(.09f, .22f, .32f);
-            button.style.color = Color.white;
+            button.style.backgroundColor = new Color(.035f, .19f, .22f);
+            button.style.color = new Color(.55f, 1f, .87f);
+            button.style.borderLeftWidth = 2;
+            button.style.borderLeftColor = new Color(.13f, .77f, .68f);
+            button.style.borderTopLeftRadius = 0;
+            button.style.borderTopRightRadius = 0;
+            button.style.borderBottomLeftRadius = 0;
+            button.style.borderBottomRightRadius = 0;
             return button;
         }
 
@@ -237,6 +266,7 @@ namespace NetworkCollapse
         public void Refresh()
         {
             if (model == null || kpis == null) return;
+            statusBar.text = $"NETWORK COLLAPSE   /   NETOPS   /   LVL {model.Level:00}   /   {(model.GameOver ? "CRITICAL" : "LINK ACTIVE")}";
             modeButton.text = BuildMode ? "Режим строительства: ВКЛ" : "Режим строительства: выкл.";
             routeButton.text = routesVisible ? "Маршруты: включены" : "Маршруты: скрыты";
 

@@ -209,6 +209,9 @@ namespace NetworkCollapse
         private void Update()
         {
             if (Input.GetKeyDown(KeyCode.P)) TogglePause();
+            if (Input.GetKeyDown(KeyCode.Alpha1)) hud.SelectScreen(0);
+            if (Input.GetKeyDown(KeyCode.Alpha2)) hud.SelectScreen(1);
+            if (Input.GetKeyDown(KeyCode.Alpha3)) hud.SelectScreen(2);
             if (!paused) elapsed += Time.deltaTime;
             while (!paused && elapsed >= 2f)
             {

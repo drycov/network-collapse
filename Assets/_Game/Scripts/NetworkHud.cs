@@ -29,6 +29,7 @@ namespace NetworkCollapse
         public event Action ExpandNetworkRequested;
         public event Action AcquireCustomersRequested;
         public event Action<int> DiagnoseRequested;
+        public event Action ScanNetworkRequested;
         private VisualElement operationsTab, missionsTab, inventoryTab, deviceConfigSection;
         private string activeTab = "operations";
         private int previewMission = -1;
@@ -171,6 +172,7 @@ namespace NetworkCollapse
             operationsTab.Add(Heading("РАЗВИТИЕ ISP", 15));
             operationsTab.Add(ActionButton("Открыть новый район / построить узел", () => ExpandNetworkRequested?.Invoke()));
             operationsTab.Add(ActionButton("Рекламная кампания / привлечь клиентов (20)", () => AcquireCustomersRequested?.Invoke()));
+            operationsTab.Add(ActionButton("NOC / СКАНИРОВАТЬ ВСЮ СЕТЬ", () => ScanNetworkRequested?.Invoke()));
             operationsTab.Add(Heading("УПРАВЛЕНИЕ", 15));
             modeButton = ActionButton("Режим строительства: выкл.", () => { BuildMode = !BuildMode; BuildModeChanged?.Invoke(BuildMode); Refresh(); });
             operationsTab.Add(modeButton);

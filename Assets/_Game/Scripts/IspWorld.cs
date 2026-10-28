@@ -71,11 +71,13 @@ namespace NetworkCollapse
             var city = Cities[index];
             if (city.Coverage > 0) return "Покрытие уже открыто: " + city.Name;
             int cost = city.Foreign ? 180 : 90;
+            if (city.Foreign && !Partners.Exists(p => p.Active && p.Name == "International Carrier"))
+                return "Для международного подключения требуется договор с International Carrier";
             if (network.Money < cost) return "Недостаточно средств: требуется " + cost;
+            if (!network.ExpandNetworkFree()) return "Нет доступных ресурсов для расширения топологии";
             network.SpendCredits(cost);
             city.Coverage = 1;
             Reputation += 3;
-            network.ExpandNetworkFree();
             if (city.Foreign) ForeignLinks++;
             return "Открыто покрытие: " + city.Name;
         }
@@ -111,7 +113,7 @@ namespace NetworkCollapse
             if (city != null) { city.Coverage = Mathf.Max(1, city.Coverage); city.Customers += rival.Customers; }
             Contracts.Add(new IspContract { City = rival.City, Tariff = "Домашний", Subscribers = rival.Customers });
             Reputation += 10;
-            network.ExpandNetworkFree();
+            // The purchased company is represented by a market asset; new physical nodes are commissioned separately.
             return "Сеть " + rival.Name + " приобретена и интегрирована; +" + rival.Customers + " клиентов";
         }
         public string ConnectPartner(NetworkSimulation network, int index)

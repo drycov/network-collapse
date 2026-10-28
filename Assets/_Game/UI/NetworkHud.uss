@@ -1,0 +1,9 @@
+.nc-window { background-color: rgb(6, 20, 28); border-top-width: 2px; border-top-color: rgb(58, 190, 174); width: 72%; max-width: 960px; height: 82%; overflow: hidden; }
+.nc-window__header { height: 52px; flex-shrink: 0; flex-direction: row; justify-content: space-between; padding-left: 16px; padding-right: 16px; padding-top: 12px; }
+.nc-window__body { flex-grow: 1; flex-shrink: 1; padding-left: 16px; padding-right: 16px; padding-bottom: 16px; }
+.nc-panel { background-color: rgb(10, 35, 43); padding: 16px; margin-bottom: 12px; border-left-width: 3px; border-left-color: rgb(64, 195, 170); }
+.nc-title { color: rgb(130, 233, 214); font-size: 17px; -unity-font-style: bold; }
+.nc-caption { color: rgb(188, 214, 218); font-size: 13px; white-space: normal; }
+.nc-action { min-height: 36px; margin-bottom: 6px; color: rgb(196, 250, 234); background-color: rgb(25, 74, 84); }
+.nc-market__tabs { flex-direction: row; flex-wrap: wrap; }
+.nc-market__map { height: 230px; background-color: rgb(7, 28, 38); }

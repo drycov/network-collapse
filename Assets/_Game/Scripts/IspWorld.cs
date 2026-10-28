@@ -191,14 +191,14 @@ namespace NetworkCollapse
             int offer = Mathf.CeilToInt((rival.Customers * 2 + rival.Assets * 20) * rival.OfferMultiplier);
             if (Reputation < rival.Reputation / 2) return "Недостаточная репутация для сделки";
             if (network.Money < offer) return "Для поглощения потребуется " + offer + " кр.";
-            if (!network.AddContractCustomers(rival.Customers, offer)) return "Недостаточно сетевой ёмкости для миграции клиентов";
+            if (!network.IntegrateRivalSites(rival.NetworkSites, rival.Customers, offer)) return "Невозможно интегрировать приобретённую сеть: бюджет или лимит узлов";
             rival.Acquired = true;
             CapturedNetworks++;
             var city = Cities.Find(x => x.Name == rival.City);
             if (city != null) { city.Coverage = Mathf.Max(1, city.Coverage); city.Customers += rival.Customers; }
             Contracts.Add(new IspContract { City = rival.City, Tariff = "Домашний", Subscribers = rival.Customers });
             Reputation += 10;
-            // The purchased company is represented by a market asset; new physical nodes are commissioned separately.
+            // Purchased network sites are now integrated into the physical network; inherited failures require repair.
             return "Сеть " + rival.Name + " приобретена и интегрирована; +" + rival.Customers + " клиентов";
         }
         public string ConnectPartner(NetworkSimulation network, int index)

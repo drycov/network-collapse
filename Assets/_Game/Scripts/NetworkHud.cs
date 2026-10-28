@@ -104,6 +104,8 @@ namespace NetworkCollapse
             nav.Add(TabButton("МИССИИ", () => ShowTab("missions")));
             nav.Add(TabButton("СКЛАД", () => ShowTab("inventory")));
             left.Add(nav);
+            nav.style.marginTop = 12;
+            nav.style.marginBottom = 12;
             operationsTab = new VisualElement();
             missionsTab = new VisualElement();
             inventoryTab = new VisualElement();
@@ -139,12 +141,12 @@ namespace NetworkCollapse
             missionsTab.Add(Heading("ДОСТИЖЕНИЯ", 14));
             achievementLabel = Body("");
             missionsTab.Add(achievementLabel);
-            missionsTab.Add(Heading("ИНВЕНТАРЬ", 14));
+            inventoryTab.Add(Heading("ИНВЕНТАРЬ", 14));
             inventoryLabel = Body("");
-            missionsTab.Add(inventoryLabel);
-            missionsTab.Add(ActionButton("Ремонтный комплект", () => UseInventoryRequested?.Invoke("repair")));
-            missionsTab.Add(ActionButton("Резервный трансивер", () => UseInventoryRequested?.Invoke("reserve")));
-            missionsTab.Add(ActionButton("Патч-корд 10G", () => UseInventoryRequested?.Invoke("patch")));
+            inventoryTab.Add(inventoryLabel);
+            inventoryTab.Add(ActionButton("Ремонтный комплект", () => UseInventoryRequested?.Invoke("repair")));
+            inventoryTab.Add(ActionButton("Резервный трансивер", () => UseInventoryRequested?.Invoke("reserve")));
+            inventoryTab.Add(ActionButton("Патч-корд 10G", () => UseInventoryRequested?.Invoke("patch")));
 
             missionsTab.Add(Heading("ЖУРНАЛ СОБЫТИЙ", 14));
             eventLog = Body("");
@@ -229,7 +231,8 @@ namespace NetworkCollapse
         {
             var label = new Label(text);
             label.style.color = new Color(.72f, .88f, .86f);
-            label.style.fontSize = 12;
+            label.style.fontSize = 13;
+            label.style.lineHeight = 19;
             label.style.whiteSpace = WhiteSpace.Normal;
             label.style.flexShrink = 0;
             label.style.marginBottom = 10;

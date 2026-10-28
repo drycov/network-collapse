@@ -42,6 +42,16 @@ namespace NetworkCollapse
             hud.UpgradeLinkRequested += id => { if (!simulation.GameOver && simulation.UpgradeLink(id)) { hud.AddEvent("Модернизирован канал #" + id); Refresh(); } };
             hud.RepairLinkRequested += id => { if (!simulation.GameOver && simulation.RepairLink(id)) { hud.AddEvent("Ремонт канала #" + id + " начат"); Refresh(); } };
             hud.NextLevelRequested += OnNextLevel;
+            hud.ConfigureDeviceRequested += (id, vlan, mtu, enabled, routing) =>
+            {
+                if (simulation.GameOver) return;
+                if (simulation.ConfigureNode(id, vlan, mtu, enabled, routing))
+                {
+                    hud.AddEvent("Настройки применены: N" + id.ToString("00"));
+                    Refresh();
+                }
+                else hud.AddEvent("Ошибка настройки: VLAN 1-4094, MTU 576-9216");
+            };
             hud.BuildModeChanged += enabled => { selectingTarget = false; hud.AddEvent(enabled ? "Строительство: выберите первый узел" : "Строительство выключено"); };
             hud.FilterChanged += tier => { map.SetTierFilter(tier); hud.AddEvent("Фильтр: " + (tier.HasValue ? tier.Value.ToString() : "Все")); };
             hud.RouteVisibilityChanged += enabled => map.SetRouteVisibility(enabled);

@@ -34,31 +34,38 @@ namespace NetworkCollapse
         {
             routeSource = source;
             routeLinks.Clear();
-            if (simulation == null || source <= 0 || source >= simulation.Nodes.Count || simulation.Nodes[source].Failed || simulation.Nodes[0].Failed) { Refresh(); return; }
-            var visited = new bool[simulation.Nodes.Count];
-            var parentNode = new int[simulation.Nodes.Count];
-            var parentLink = new int[simulation.Nodes.Count];
-            var queue = new Queue<int>();
-            queue.Enqueue(source);
-            visited[source] = true;
-            while (queue.Count > 0)
+            if (simulation != null)
             {
-                int current = queue.Dequeue();
-                if (current == 0) break;
-                for (int i = 0; i < simulation.Links.Count; i++)
-                {
-                    var link = simulation.Links[i];
-                    if (link.Failed || link.Load <= 0 || simulation.Nodes[link.A].Failed || simulation.Nodes[link.B].Failed) continue;
-                    int next = link.A == current ? link.B : link.B == current ? link.A : -1;
-                    if (next < 0 || visited[next]) continue;
-                    visited[next] = true;
-                    parentNode[next] = current;
-                    parentLink[next] = i;
-                    queue.Enqueue(next);
-                }
+                var path = simulation.FindDisplayRoute(source);
+                if (path != null) foreach (int link in path) routeLinks.Add(link);
             }
-            if (visited[0]) for (int n = 0; n != source; n = parentNode[n]) routeLinks.Add(parentLink[n]);
             Refresh();
+        }
+        private LineRenderer previewLine;
+        public void SetBuildPreview(int source, Vector3 world, int target = -1)
+        {
+            if (previewLine == null && simulation != null)
+            {
+                var obj = new GameObject("Construction Preview");
+                obj.transform.SetParent(transform, false);
+                previewLine = obj.AddComponent<LineRenderer>();
+                previewLine.material = lineMaterial;
+                previewLine.positionCount = 2;
+                previewLine.sortingOrder = 5;
+                previewLine.startWidth = previewLine.endWidth = .11f;
+            }
+            bool valid = simulation != null && source >= 0 && source < simulation.Nodes.Count;
+            if (previewLine == null) return;
+            previewLine.enabled = valid;
+            if (!valid) return;
+            Vector3 end = target >= 0 && target < simulation.Nodes.Count
+                ? (Vector3)simulation.Nodes[target].Position : new Vector3(world.x, world.y, 0);
+            previewLine.SetPosition(0, simulation.Nodes[source].Position);
+            previewLine.SetPosition(1, end);
+            bool allowed = target < 0 || (target != source && simulation.FindLink(source, target) < 0 &&
+                simulation.Money >= NetworkSimulation.BuildCost && !simulation.GameOver);
+            Color color = allowed ? new Color(.3f, 1f, .67f, .85f) : new Color(1f, .32f, .27f, .85f);
+            previewLine.startColor = previewLine.endColor = color;
         }
         public void SetTierFilter(EquipmentTier? tier) { visibleTier = tier; Refresh(); }
 
@@ -119,6 +126,7 @@ namespace NetworkCollapse
             selectedLink = -1;
             routeLinks.Clear();
             routeSource = -1;
+            previewLine = null;
             Refresh();
         }
 

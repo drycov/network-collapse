@@ -11,6 +11,7 @@ namespace NetworkCollapse
         private NetworkCameraController cameraController;
         private float elapsed;
         private bool selectingTarget;
+        private bool paused;
         private NetworkCampaign campaign;
         private NetworkAudio audio;
         private bool incidentPending;
@@ -104,6 +105,7 @@ namespace NetworkCollapse
                 }
             };
             hud.NextLevelRequested += OnNextLevel;
+            hud.PauseRequested += TogglePause;
             hud.UpgradeDeviceRequested += id => { if (simulation.UpgradeDevice(id)) { hud.AddEvent("Оборудование модернизировано: N" + id); audio.Play(SoundCue.Confirm); Refresh(); } };
             hud.UseInventoryRequested += id =>
             {
@@ -134,8 +136,15 @@ namespace NetworkCollapse
             ResetGame();
         }
 
+        private void TogglePause()
+        {
+            paused = !paused;
+            hud.SetPaused(paused);
+        }
+
         private void ResetGame()
         {
+            paused = false;
             simulation = new NetworkSimulation();
             campaign = new NetworkCampaign();
             campaign.Notification += message => { hud.AddEvent(message); audio.Play(message.StartsWith("Достижение:") ? SoundCue.Achievement : SoundCue.Mission); };
@@ -149,6 +158,7 @@ namespace NetworkCollapse
             hud.Initialize(simulation);
             hud.SetCampaign(campaign);
             hud.Select(-1);
+            hud.SetPaused(false);
             hud.AddEvent("Диспетчерская запущена · " + campaign.ChapterTitle);
             hud.AddEvent(campaign.StoryBriefing);
             lastVoicedChapter = campaign.Chapter;
@@ -198,8 +208,9 @@ namespace NetworkCollapse
 
         private void Update()
         {
-            elapsed += Time.deltaTime;
-            while (elapsed >= 2f)
+            if (Input.GetKeyDown(KeyCode.P)) TogglePause();
+            if (!paused) elapsed += Time.deltaTime;
+            while (!paused && elapsed >= 2f)
             {
                 elapsed -= 2f;
                 simulation.Step(2f);

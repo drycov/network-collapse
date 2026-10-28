@@ -93,3 +93,9 @@ Added `NetworkDataPlane.cs` with network interface, VLAN, subnet, route, neighbo
 Traffic allocation now attempts a bandwidth-eligible primary route and a disjoint alternate. When the second route can carry half the source demand, a simple 50/50 split is used. Every simulation tick reroutes from scratch, so failures can cause selection of another available path. This is **simplified multipath traffic allocation**, not standards-compliant ECMP hashing or OSPF convergence. The device inspector shows per-source primary and alternate allocated Mbps; primary is yellow and alternate purple on the map.
 
 Unity runtime notes: `NetworkCameraController.ResetView()` now tolerates early calls. The dynamic `PanelSettings` is assigned a `ThemeStyleSheet`; Unity 6000.6 may still require a serialized panel-settings/theme asset for reliable packaged-player rendering. Editor and Web compilation have not been run.
+
+## Terminal dispatch visual update
+
+The interface uses an original dark command-console aesthetic influenced by the legibility and workstation feel of classic 2000s network simulation games such as Uplink. It does not reuse Uplink assets or reproduce its interface. Added a top operations status bar, squared edge-lit panels, turquoise text/buttons, a coordinate grid behind the topology, and a color legend. Unity's procedural UI Toolkit screen remains runtime-generated. The editor/Web build has not yet been visually validated.
+
+Unity `.gitignore` excludes regenerated Library, Temp, Obj, Logs, build outputs, UserSettings and IDE files. Keep `Assets/*.meta`, `Packages` and `ProjectSettings` committed.

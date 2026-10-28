@@ -10,6 +10,7 @@
 /[Uu]serSettings/
 /[Aa]ssets/AssetStoreTools*
 /[Aa]ssets/Plugins/Editor/JetBrains*
+/bin/
 
 # IDE and generated project files
 .vs/

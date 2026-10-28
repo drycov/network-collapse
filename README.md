@@ -49,3 +49,14 @@ File → Build Profiles → Web → Switch Profile → Build. Publish the export
 - Improve traffic routing: track actual packet flow by direction and remove order bias.
 - Add real repair times, link-level actions, player objectives and progression.
 - Check official Game Off theme on November 1 and adapt gameplay accordingly.
+
+
+## Interactive gameplay
+
+- **Core / Distribution / Access** equipment categories with tier colors and capacity.
+- Select node by left-click; press **B** and click second node to plan a link.
+- Right panel: build new link (35), upgrade capacity (25), or initiate repair.
+- Left panel: fiber cut, power outage and cascading incident scenarios.
+- **F** resets camera; right/middle drag pans and wheel zooms.
+- Unity Editor: **Network Collapse → Create Main Scene** generates `Assets/_Game/Scenes/Main.unity` and adds it to Build Settings. Save the generated scene in version control.
+- Playable logic is written; Unity compilation and WebGL runtime still require local verification.

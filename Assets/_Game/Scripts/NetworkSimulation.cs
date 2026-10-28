@@ -89,7 +89,7 @@ namespace NetworkCollapse
         public int TickCount { get; private set; }
         public int Money { get; private set; } = 180;
         public int Customers { get; private set; } = 12;
-        public int AcquiredMaintenance { get; private set; };
+        public int AcquiredMaintenance { get; private set; }
         public int AcquiredSites { get; private set; }
         public int MarketReach { get; private set; } = 1;
         public string OperatorScale => Customers >= 2000 ? "Транснациональный" : Customers >= 500 ? "Национальный" : Customers >= 120 ? "Региональный" : "Локальный ISP";

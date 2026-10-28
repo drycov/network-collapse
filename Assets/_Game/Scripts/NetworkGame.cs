@@ -38,7 +38,7 @@ namespace NetworkCollapse
             hud.RandomFailureRequested += RandomFailure;
             hud.ResetRequested += ResetGame;
             hud.IncidentRequested += type => { if (simulation.GameOver) return; simulation.StartIncident(type); hud.AddEvent("Сценарий: " + type); Refresh(); };
-            hud.BuildLinkRequested += (a, b) => { if (!simulation.GameOver && simulation.BuildLink(a, b)) { hud.AddEvent($"Канал N{a:00}–N{b:00} построен"); map.SetBuildPreview(-1, Vector3.zero); Refresh(); } };
+            hud.BuildLinkRequested += (a, b) => { if (!simulation.GameOver && simulation.BuildLink(a, b)) { hud.AddEvent($"Канал N{a:00}–N{b:00} построен"); map.SetBuildPreview(-1, Vector3.zero); hud.Select(a); map.SetSelected(a); Refresh(); } };
             hud.UpgradeLinkRequested += id => { if (!simulation.GameOver && simulation.UpgradeLink(id)) { hud.AddEvent("Модернизирован канал #" + id); Refresh(); } };
             hud.RepairLinkRequested += id => { if (!simulation.GameOver && simulation.RepairLink(id)) { hud.AddEvent("Ремонт канала #" + id + " начат"); Refresh(); } };
             hud.NextLevelRequested += OnNextLevel;

@@ -26,6 +26,7 @@ namespace NetworkCollapse.Editor
             camera.clearFlags = CameraClearFlags.SolidColor;
             camera.backgroundColor = new Color(.025f, .039f, .071f);
             cameraObject.transform.position = new Vector3(0, 0, -20);
+            cameraObject.AddComponent<AudioListener>();
             cameraObject.AddComponent<NetworkCameraController>();
             new GameObject("Network Collapse - Game Controller").AddComponent<NetworkGame>();
             EditorSceneManager.MarkSceneDirty(scene);

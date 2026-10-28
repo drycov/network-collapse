@@ -42,6 +42,8 @@ namespace NetworkCollapse
             hud.UpgradeLinkRequested += id => { if (!simulation.GameOver && simulation.UpgradeLink(id)) { hud.AddEvent("Модернизирован канал #" + id); Refresh(); } };
             hud.RepairLinkRequested += id => { if (!simulation.GameOver && simulation.RepairLink(id)) { hud.AddEvent("Ремонт канала #" + id + " начат"); Refresh(); } };
             hud.NextLevelRequested += OnNextLevel;
+            hud.BuildModeChanged += enabled => { selectingTarget = false; hud.AddEvent(enabled ? "Строительство: выберите первый узел" : "Строительство выключено"); };
+            hud.FilterChanged += tier => { map.SetTierFilter(tier); hud.AddEvent("Фильтр: " + (tier.HasValue ? tier.Value.ToString() : "Все")); };
             ResetGame();
         }
 
@@ -118,7 +120,7 @@ namespace NetworkCollapse
                 Vector3 world = cameraController.ScreenWorld(Input.mousePosition);
                 int id = map.HitTest(world);
 
-                if (selectingTarget && id >= 0 && id != hud.SelectedId)
+                if ((selectingTarget || hud.BuildMode) && id >= 0 && hud.SelectedId >= 0 && id != hud.SelectedId)
                 {
                     hud.SelectTarget(id);
                     map.SetBuildTarget(id);
@@ -133,9 +135,12 @@ namespace NetworkCollapse
                     }
                     else
                     {
-                        // Optional: click empty space clears selection
-                        // map.SetSelected(-1);
-                        // hud.Select(-1);
+                        int linkId = map.HitTestLink(world);
+                        if (linkId >= 0)
+                        {
+                            map.SetSelectedLink(linkId);
+                            hud.SelectLink(linkId);
+                        }
                     }
                 }
             }

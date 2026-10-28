@@ -72,3 +72,16 @@ When `UIDocument`, `VisualElement`, `Label` or `Button` cannot be found in `Unit
 5. If the editor still uses stale package metadata, close it, delete `Library/PackageCache` and `Library/ScriptAssemblies` (not `Assets`, `Packages`, or `ProjectSettings`), then reopen the project.
 
 Do not install a separate `com.unity.ui` package for these errors. UIElements is a built-in editor module. A GitHub manifest change does not change a running local Unity Editor until the project is updated and packages are reloaded.
+
+## Asymmetric hierarchy and device configuration
+
+The seeded generator now builds two core routers, distribution L3 switches and access L2 switches. Device positions and redundant links are deliberately asymmetric. Select a device on the map to edit its VLAN ID, MTU, administrative status and routing-mode setting in the inspector.
+
+Addressing conventions in this gameplay prototype:
+- Management addresses use the RFC 1918 private 10/8 range.
+- Simulated point-to-point link labels use /31 format from RFC 3021, but **all current links are abstract capacity edges**; VLAN-tagged L2 access links are not yet modeled as individual routed /31 interfaces.
+- CIDR labels do not imply a complete RFC 4632 routing implementation.
+- `OspfSimulated` is a configuration flag only; OSPF neighbors, areas, LSDB, SPF and protocol messages from RFC 2328 are **not implemented**.
+- Switch VLAN and MTU settings are validated and stored, but VLAN forwarding and per-interface MTU enforcement are pending. Do not treat the current simulator as RFC-conformance-tested.
+
+Upcoming: typed physical interfaces, VLAN-tagged trunks and access ports, IPv4 subnet validation, L3 adjacency rules, routing tables, and scenario tests.

@@ -102,6 +102,7 @@ namespace NetworkCollapse
         public void Initialize(NetworkSimulation simulation)
         {
             model = simulation;
+            lastLayoutWidth = -1f;
             BuildMode = false;
             SelectedLinkId = -1;
             if (document == null)
@@ -537,6 +538,7 @@ namespace NetworkCollapse
             menuOpen = open;
             if (mainMenu != null) mainMenu.style.display = open ? DisplayStyle.Flex : DisplayStyle.None;
             if (dialogueOverlay != null && open) dialogueOverlay.style.display = DisplayStyle.None;
+            if (open && windowLayer != null) windowLayer.style.display = DisplayStyle.None;
             if (windowLayer != null) windowLayer.style.display = open || activeTab == "operations" ? DisplayStyle.None : DisplayStyle.Flex;
             if (leftDock != null) leftDock.style.display = open ? DisplayStyle.None : DisplayStyle.Flex;
             if (rightDock != null) rightDock.style.display = open || (SelectedId < 0 && SelectedLinkId < 0 && !BuildMode) ? DisplayStyle.None : DisplayStyle.Flex;
@@ -660,6 +662,12 @@ namespace NetworkCollapse
                 tab == "inventory" ? inventoryTab :
                 tab == "market" ? marketTab : settingsTab;
             if (content == null) return;
+            // Reparent only when switching screens; avoid resetting scroll position on redundant calls.
+            if (windowContent.childCount == 1 && windowContent[0] == content)
+            {
+                windowLayer.style.display = menuOpen ? DisplayStyle.None : DisplayStyle.Flex;
+                return;
+            }
             windowContent.Clear();
             windowContent.Add(content);
             content.style.display = DisplayStyle.Flex;
@@ -914,8 +922,6 @@ namespace NetworkCollapse
         public void Refresh()
         {
             if (model == null || kpis == null) return;
-            if (windowLayer != null && windowLayer.style.display == DisplayStyle.Flex && windowContent != null)
-                windowContent.style.minHeight = 0;
             if (rightDock != null && !menuOpen) rightDock.style.display = SelectedId >= 0 || SelectedLinkId >= 0 || BuildMode ? DisplayStyle.Flex : DisplayStyle.None;
             if (world != null && marketSummary != null)
             {

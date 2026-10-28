@@ -36,6 +36,8 @@ namespace NetworkCollapse
         public event Action<int> CityExpansionRequested;
         public event Action<int, int> ContractRequested;
         public event Action<int> RivalAcquisitionRequested;
+        public event Action<int, int> RivalNegotiationRequested;
+        private Label worldMapLabel, bgpTableLabel;
         public event Action<int> PartnerConnectionRequested;
         private string activeTab = "operations";
         private int previewMission = -1;
@@ -465,6 +467,8 @@ namespace NetworkCollapse
             marketTab.Clear();
             marketTab.Add(Heading("МИРОВОЙ РЫНОК ISP", 15));
             marketSummary = Body(""); marketTab.Add(marketSummary);
+            marketTab.Add(Heading("ГЕОГРАФИЯ / ГОРОДА", 14));
+            worldMapLabel = Body(""); marketTab.Add(worldMapLabel);
             marketTab.Add(Heading("ГОРОДА И ПОКРЫТИЕ", 14));
             for (int i = 0; i < world.Cities.Count; i++)
             {
@@ -483,6 +487,7 @@ namespace NetworkCollapse
             for (int i = 0; i < world.Rivals.Count; i++)
             {
                 int index = i;
+                marketTab.Add(ActionButton("Переговоры: " + world.Rivals[i].Name + " / 120%", () => RivalNegotiationRequested?.Invoke(index, 120)));
                 marketTab.Add(ActionButton("Выкупить " + world.Rivals[i].Name, () => RivalAcquisitionRequested?.Invoke(index)));
             }
             marketTab.Add(Heading("ТРАНЗИТ / ПИРИНГ / BGP", 14));
@@ -492,6 +497,8 @@ namespace NetworkCollapse
                 marketTab.Add(ActionButton(world.Partners[i].Name + " / AS" + world.Partners[i].Asn,
                     () => PartnerConnectionRequested?.Invoke(index)));
             }
+            marketTab.Add(Heading("BGP / RIB", 14));
+            bgpTableLabel = Body(""); marketTab.Add(bgpTableLabel);
             Refresh();
         }
 
@@ -570,7 +577,18 @@ namespace NetworkCollapse
         public void Refresh()
         {
             if (model == null || kpis == null) return;
-            if (world != null && marketSummary != null) marketSummary.text = world.Summary();
+            if (world != null && marketSummary != null)
+            {
+                marketSummary.text = world.Summary() + "\n" + world.MarketNews;
+                if (worldMapLabel != null)
+                {
+                    var regions = new System.Collections.Generic.List<string>();
+                    foreach (var city in world.Cities)
+                        regions.Add(city.Country + " / " + city.Name + " [" + city.MapPosition.x.ToString("0") + "," + city.MapPosition.y.ToString("0") + "] " + (city.Coverage > 0 ? "ONLINE" : "CLOSED"));
+                    worldMapLabel.text = string.Join("\n", regions);
+                }
+                if (bgpTableLabel != null) bgpTableLabel.text = world.BgpSummary();
+            }
             availabilityBar.value = model.Availability * 100f;
             objectiveBar.value = model.ObjectiveTimer <= 0 ? 0 : Mathf.Clamp01(model.ObjectiveProgress / model.ObjectiveTimer) * 100f;
             alertBanner.text = model.GameOver ? "КРИТИЧЕСКАЯ ПОТЕРЯ СВЯЗНОСТИ" : model.FailedNodes + model.FailedLinks > 0 ? "АКТИВНЫЕ АВАРИИ: " + (model.FailedNodes + model.FailedLinks) : "СЕТЬ РАБОТАЕТ ШТАТНО";

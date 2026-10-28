@@ -122,3 +122,9 @@ The runtime console has two progress gauges (availability and level objective), 
 6. Balance: early funds increased to 180, initial upkeep softened, and early levels have a less severe game-over threshold.
 
 Limits: save versioning/migration is not implemented; RNG state, packet-flow animation phases, current voice clip and precise in-progress routing flow allocations are not saved. A fresh deterministic routing pass computes the post-load display/availability. Dialogues are briefing overlays rather than branching conversations. Responsive layout requires validation at multiple resolutions, and graphics mode is a simple frame-rate/vsync preference rather than full quality presets. Unity Editor compilation and player builds were not run.
+
+## Engineering-grade line construction (game abstraction)
+
+Select a source and destination device in build mode. The device inspector now offers **Copper**, **Fiber** and **Radio** media and selectable speeds (10/50/100/150/500/1000 Mbps). The game checks available endpoint ports, link length, requested media/speed and credits before accepting a job. A detailed quote combines base work, per-distance materials, transceiver/radio hardware, and capacity. Build time depends on distance and medium; a new channel is **not routed or animated** until commissioning completes. An in-progress link is orange on the map. Medium-dependent repair prices and times apply after incidents. The configuration is included in the existing network snapshot.
+
+These are deliberately normalized game units, not real-world copper/fiber distance engineering specifications. Port inventories are modeled as counts rather than full pluggable/PHY compatibility; RF line-of-sight, attenuation, splices, licensing, permits and actual materials inventory are future work. Current UI speed choices may be rejected for an incompatible medium; select a supported combination. Compilation and Unity Editor playtesting still required.

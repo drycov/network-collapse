@@ -792,7 +792,8 @@ namespace NetworkCollapse
                 $"Оператор: {model.OperatorScale}\nКлиенты: {model.Customers} · Узлы: {model.Nodes.Count}\n" +
                 $"Уровень {model.Level} · Очки {model.Score}\n" +
                 $"Доступность: {model.Availability:P1}\n" +
-                $"Бюджет: {model.Money}\n" +
+                $"Бюджет: {model.Money} · Приобретено площадок: {model.AcquiredSites}\n" +
+                $"Обязательства: {model.AcquiredMaintenance} кр./тик\n" +
                 $"Аварии: узлы {model.FailedNodes} / линки {model.FailedLinks}\n" +
                 $"Потеря: {model.DroppedTraffic:0.0} · Тик {model.TickCount}{extra}";
 

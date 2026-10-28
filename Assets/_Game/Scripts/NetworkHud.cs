@@ -9,6 +9,7 @@ namespace NetworkCollapse
         private NetworkSimulation model;
         private UIDocument document;
         private PanelSettings panelSettings;
+        private ThemeStyleSheet runtimeTheme;
         private Label kpis, details, title, objectiveLabel;
         private Button repair, failure, build, upgrade, repairLink, nextLevel;
         private Label connectionInfo, eventLog;
@@ -51,6 +52,8 @@ namespace NetworkCollapse
                 document = gameObject.AddComponent<UIDocument>();
                 panelSettings = ScriptableObject.CreateInstance<PanelSettings>();
                 panelSettings.scaleMode = PanelScaleMode.ConstantPixelSize;
+                runtimeTheme = ScriptableObject.CreateInstance<ThemeStyleSheet>();
+                panelSettings.themeStyleSheet = runtimeTheme;
                 document.panelSettings = panelSettings;
             }
 
@@ -317,6 +320,7 @@ namespace NetworkCollapse
         private void OnDestroy()
         {
             if (panelSettings != null) Destroy(panelSettings);
+            if (runtimeTheme != null) Destroy(runtimeTheme);
         }
     }
 }

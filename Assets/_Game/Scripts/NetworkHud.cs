@@ -309,12 +309,14 @@ namespace NetworkCollapse
             var node = model.Nodes[SelectedId];
             title.text = $"{node.Hostname} · {node.Tier}";
             string repairInfo = node.RepairRemaining > 0f ? $"\nРемонт: {node.RepairRemaining:0.0} с" : "";
+            string routes = model.PrimaryPaths.TryGetValue(node.Id, out var primary) ? $"\\nОсновной: {primary.Count} каналов, {model.PrimaryTraffic[node.Id]:0.0} Mbps" : "\\nОсновной: недоступен";
+            routes += model.BackupPaths.TryGetValue(node.Id, out var alternate) && model.BackupTraffic.TryGetValue(node.Id, out var amount) ? $"\\nРезерв/ECMP: {alternate.Count} каналов, {amount:0.0} Mbps" : "\\nРезерв: отсутствует";
             details.text =
                 $"Роль: {node.Role} | Управление: {node.ManagementIp}\nVLAN: {node.VlanId} | MTU: {node.Mtu} | Routing: {node.Routing}\n" +
                 $"Состояние: {node.Status}{repairInfo}\n" +
                 $"Нагрузка: {node.Load:0.0} / {node.Capacity:0.0}\n" +
                 $"Потребление: {node.Demand:0.0}\n" +
-                $"Соединений: {model.Links.FindAll(l => l.A == node.Id || l.B == node.Id).Count}";
+                $"Соединений: {model.Links.FindAll(l => l.A == node.Id || l.B == node.Id).Count}" + routes;
         }
 
         private void OnDestroy()

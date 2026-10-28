@@ -16,6 +16,8 @@ namespace NetworkCollapse
         public event Action<int> UpgradeDeviceRequested;
         private VisualElement operationsTab, missionsTab, inventoryTab, deviceConfigSection;
         private string activeTab = "operations";
+        private int previewMission = -1;
+        private VisualElement missionPicker;
         private NetworkCampaign campaign;
         public event Action<string> UseInventoryRequested;
         private Button modeButton;
@@ -141,6 +143,7 @@ namespace NetworkCollapse
             missionsTab.Add(missionLabel);
             missionsTab.Add(Heading("ДОСКА ЗАДАНИЙ", 14));
             boardLabel = Body(""); missionsTab.Add(boardLabel);
+            missionPicker = new VisualElement(); missionsTab.Add(missionPicker);
             missionsTab.Add(Heading("СВЯЗЬ С ДИСПЕТЧЕРСКОЙ", 14));
             dialogueLabel = Body(""); missionsTab.Add(dialogueLabel);
             missionsTab.Add(Heading("КАРТА ИНЦИДЕНТОВ", 14));
@@ -283,6 +286,16 @@ namespace NetworkCollapse
         public void SetCampaign(NetworkCampaign value)
         {
             campaign = value;
+            previewMission = -1;
+            if (missionPicker != null && campaign != null)
+            {
+                missionPicker.Clear();
+                for (int i = 0; i < campaign.Missions.Count; i++)
+                {
+                    int index = i;
+                    missionPicker.Add(ActionButton((i + 1) + ". " + campaign.Missions[i].Title, () => { previewMission = index; Refresh(); }));
+                }
+            }
             Refresh();
         }
 
@@ -351,6 +364,12 @@ namespace NetworkCollapse
                 storyLabel.text = campaign.StoryBriefing;
                 missionLabel.text = campaign.MissionText();
                 boardLabel.text = campaign.MissionBoard();
+                if (previewMission >= 0 && previewMission < campaign.Missions.Count)
+                {
+                    var mission = campaign.Missions[previewMission];
+                    boardLabel.text += "\n\n> " + mission.Title + "\n" + mission.Briefing + "\nПрогресс: " + mission.Progress + "/" + mission.Target +
+                        (mission.Completed ? "\nЗАВЕРШЕНО" : previewMission == campaign.Chapter ? "\nАКТИВНО" : "\nЗАБЛОКИРОВАНО");
+                }
                 dialogueLabel.text = campaign.StoryBriefing;
                 var incidents = new System.Collections.Generic.List<string>();
                 foreach (var node in model.Nodes) if (node.Failed) incidents.Add("[NODE] " + node.Hostname + " · " + node.Status);

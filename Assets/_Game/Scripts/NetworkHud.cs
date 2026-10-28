@@ -52,7 +52,7 @@ namespace NetworkCollapse
         private VisualElement windowLayer, currentWindow;
         private VisualElement hudAlert;
         private float lastLayoutWidth = -1f;
-        public bool HasWindowOpen => windowLayer != null && windowLayer.style.display == DisplayStyle.Flex;
+        public bool HasWindowOpen => windowLayer != null && windowLayer.resolvedStyle.display != DisplayStyle.None;
         private ScrollView windowContent;
         public event Action<int> PartnerConnectionRequested;
         private string activeTab = "operations";
@@ -652,6 +652,7 @@ namespace NetworkCollapse
             foreach (var panel in new[] { missionsTab, inventoryTab, marketTab, settingsTab })
                 if (panel != null) panel.style.display = DisplayStyle.None;
             if (windowLayer == null) return;
+            if (tab == "market" && world != null) RenderMarket();
             if (tab == "operations")
             {
                 windowLayer.style.display = DisplayStyle.None;

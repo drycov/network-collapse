@@ -60,3 +60,15 @@ File → Build Profiles → Web → Switch Profile → Build. Publish the export
 - **F** resets camera; right/middle drag pans and wheel zooms.
 - Unity Editor: **Network Collapse → Create Main Scene** generates `Assets/_Game/Scenes/Main.unity` and adds it to Build Settings. Save the generated scene in version control.
 - Playable logic is written; Unity compilation and WebGL runtime still require local verification.
+
+## Troubleshooting: CS1069 UIElements
+
+When `UIDocument`, `VisualElement`, `Label` or `Button` cannot be found in `UnityEngine.UIElements`, the Unity built-in UIElements module is unavailable to the compiler. Both `com.unity.modules.ui` and `com.unity.modules.uielements` are explicitly enabled in `Packages/manifest.json`.
+
+1. Close the Unity Editor.
+2. Run `git pull origin main`, verify the manifest contains both modules.
+3. Open the project in the Unity version listed in `ProjectSettings/ProjectVersion.txt` (currently 6000.6.7f1).
+4. In Package Manager select **Packages: Built-in**, find **UIElements** and ensure it is enabled. Do the same for **UI**.
+5. If the editor still uses stale package metadata, close it, delete `Library/PackageCache` and `Library/ScriptAssemblies` (not `Assets`, `Packages`, or `ProjectSettings`), then reopen the project.
+
+Do not install a separate `com.unity.ui` package for these errors. UIElements is a built-in editor module. A GitHub manifest change does not change a running local Unity Editor until the project is updated and packages are reloaded.

@@ -17,6 +17,9 @@ namespace NetworkCollapse
         public int SelectedLinkId { get; private set; } = -1;
         public event Action<bool> BuildModeChanged;
         public event Action<EquipmentTier?> FilterChanged;
+        public event Action<bool> RouteVisibilityChanged;
+        private Button routeButton;
+        private bool routesVisible = true;
         private readonly System.Collections.Generic.List<string> events = new System.Collections.Generic.List<string>();
 
         public event Action<int, int> BuildLinkRequested;
@@ -75,6 +78,8 @@ namespace NetworkCollapse
             left.Add(ActionButton("Core", () => FilterChanged?.Invoke(EquipmentTier.Core)));
             left.Add(ActionButton("Distribution", () => FilterChanged?.Invoke(EquipmentTier.Distribution)));
             left.Add(ActionButton("Access", () => FilterChanged?.Invoke(EquipmentTier.Access)));
+            routeButton = ActionButton("Маршруты: включены", () => { routesVisible = !routesVisible; RouteVisibilityChanged?.Invoke(routesVisible); Refresh(); });
+            left.Add(routeButton);
             left.Add(ActionButton("Случайная авария  [SPACE]", () => RandomFailureRequested?.Invoke()));
             left.Add(ActionButton("Начать заново  [R]", () => ResetRequested?.Invoke()));
             nextLevel = ActionButton("Следующий уровень", () => NextLevelRequested?.Invoke());
@@ -163,6 +168,13 @@ namespace NetworkCollapse
             if (eventLog != null) eventLog.text = string.Join("\n", events);
         }
 
+        public void SetBuildMode(bool value)
+        {
+            BuildMode = value;
+            BuildModeChanged?.Invoke(value);
+            Refresh();
+        }
+
         public void SelectLink(int index)
         {
             SelectedId = -1;
@@ -191,6 +203,7 @@ namespace NetworkCollapse
         {
             if (model == null || kpis == null) return;
             modeButton.text = BuildMode ? "Режим строительства: ВКЛ" : "Режим строительства: выкл.";
+            routeButton.text = routesVisible ? "Маршруты: включены" : "Маршруты: скрыты";
 
             string extra = model.GameOver ? "\n⚠ СЕТЬ РУХНУЛА" :
                 model.ObjectiveComplete ? "\n✓ Цель достигнута" : "";
@@ -239,7 +252,7 @@ namespace NetworkCollapse
             else
                 repairLink.text = $"Ремонт канала ({NetworkSimulation.LinkRepairCost})";
 
-            connectionInfo.text = SelectedLinkId >= 0 && index < model.Links.Count
+            connectionInfo.text = SelectedLinkId >= 0 && index >= 0 && index < model.Links.Count
                 ? $"Канал #{index}: N{model.Links[index].A:00} ↔ N{model.Links[index].B:00}\nНагрузка: {model.Links[index].Load:0.0}/{model.Links[index].Capacity:0.0}\nСостояние: {(model.Links[index].Failed ? "Авария" : "Работает")}\nПостроен игроком: {(model.Links[index].PlayerBuilt ? "Да" : "Нет")}" : !pair
                 ? "Нажмите B и выберите второй узел."
                 : index < 0

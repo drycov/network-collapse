@@ -67,6 +67,16 @@ namespace NetworkCollapse
 
         public readonly List<NetworkNode> Nodes = new List<NetworkNode>();
         public readonly List<NetworkLink> Links = new List<NetworkLink>();
+        public readonly List<NetworkInterface> Interfaces = new List<NetworkInterface>();
+        public readonly List<VLAN> Vlans = new List<VLAN>();
+        public readonly List<Subnet> Subnets = new List<Subnet>();
+        public readonly List<RoutingTable> RoutingTables = new List<RoutingTable>();
+        public readonly List<NeighborTable> NeighborTables = new List<NeighborTable>();
+        public readonly List<SwitchingTable> SwitchingTables = new List<SwitchingTable>();
+        public readonly Dictionary<int, List<int>> PrimaryPaths = new Dictionary<int, List<int>>();
+        public readonly Dictionary<int, List<int>> BackupPaths = new Dictionary<int, List<int>>();
+        public readonly Dictionary<int, float> PrimaryTraffic = new Dictionary<int, float>();
+        public readonly Dictionary<int, float> BackupTraffic = new Dictionary<int, float>();
         private readonly System.Random random;
 
         public int TickCount { get; private set; }
@@ -102,6 +112,9 @@ namespace NetworkCollapse
         {
             Nodes.Clear();
             Links.Clear();
+            Interfaces.Clear(); Vlans.Clear(); Subnets.Clear(); RoutingTables.Clear();
+            NeighborTables.Clear(); SwitchingTables.Clear();
+            PrimaryPaths.Clear(); BackupPaths.Clear(); PrimaryTraffic.Clear(); BackupTraffic.Clear();
             int count = 16 + Mathf.Min(Level, 6);
             for (int i = 0; i < count; i++)
             {
@@ -168,15 +181,28 @@ namespace NetworkCollapse
             node.Mtu = mtu;
             node.AdminEnabled = enabled;
             node.Routing = node.Role == DeviceRole.Layer2Switch ? RoutingMode.Static : routing;
+            foreach (var iface in Interfaces) if (iface.NodeId == id) { iface.Mtu = mtu; iface.VlanId = vlan; iface.AdminUp = enabled; }
             Step();
             return true;
         }
 
-        private void AddLink(int a, int b, float capacity, bool built) =>
-            Links.Add(new NetworkLink { A = a, B = b, Capacity = capacity, PlayerBuilt = built,
-                Prefix = "10.254." + (Links.Count / 128) + "." + ((Links.Count % 128) * 2) + "/31",
-                EndpointA = "10.254." + (Links.Count / 128) + "." + ((Links.Count % 128) * 2),
-                EndpointB = "10.254." + (Links.Count / 128) + "." + ((Links.Count % 128) * 2 + 1) });
+        private void AddLink(int a, int b, float capacity, bool built)
+        {
+            int index = Links.Count;
+            string prefix = "10.254." + (index / 128) + "." + ((index % 128) * 2);
+            Links.Add(new NetworkLink {
+                A = a, B = b, Capacity = capacity, PlayerBuilt = built,
+                Prefix = prefix + "/31", EndpointA = prefix, EndpointB = "10.254." + (index / 128) + "." + ((index % 128) * 2 + 1)
+            });
+            var left = Nodes[a]; var right = Nodes[b];
+            Interfaces.Add(new NetworkInterface { Name = "eth" + index, NodeId = a, LinkIndex = index,
+                Ipv4Address = Links[index].EndpointA, VlanId = left.VlanId, Mtu = left.Mtu,
+                Mode = left.Role == DeviceRole.Layer2Switch ? InterfaceMode.Access : InterfaceMode.Routed });
+            Interfaces.Add(new NetworkInterface { Name = "eth" + index, NodeId = b, LinkIndex = index,
+                Ipv4Address = Links[index].EndpointB, VlanId = right.VlanId, Mtu = right.Mtu,
+                Mode = right.Role == DeviceRole.Layer2Switch ? InterfaceMode.Access : InterfaceMode.Routed });
+            Subnets.Add(new Subnet { NetworkAddress = prefix, PrefixLength = 31, Purpose = "Simulated link " + index });
+        }
 
         public int FindLink(int a, int b) =>
             Links.FindIndex(l => (l.A == a && l.B == b) || (l.A == b && l.B == a));
@@ -238,6 +264,7 @@ namespace NetworkCollapse
             }
 
             foreach (var node in Nodes) node.Load = 0f;
+            PrimaryPaths.Clear(); BackupPaths.Clear(); PrimaryTraffic.Clear(); BackupTraffic.Clear();
             foreach (var link in Links)
             {
                 link.Load = 0f;
@@ -275,6 +302,10 @@ namespace NetworkCollapse
                 }
                 if (!enough) continue;
 
+                PrimaryPaths[source] = new List<int>(path);
+                PrimaryTraffic[source] = sender.Demand;
+                var alternate = FindOptimalPath(source, 0, sender.Demand, path);
+                if (alternate != null) BackupPaths[source] = alternate;
                 sender.Load = sender.Demand;
                 int prev = source;
                 foreach (int li in path)
@@ -304,6 +335,7 @@ namespace NetworkCollapse
                 Nodes[link.B].Load += link.Load * 0.06f;
             }
 
+            RebuildDerivedTables();
             Availability = requested > 0f ? delivered / requested : 1f;
             DroppedTraffic = Mathf.Max(0f, requested - delivered);
 
@@ -335,7 +367,7 @@ namespace NetworkCollapse
 
         // Capacity-aware Dijkstra. A channel must have enough residual bandwidth for the full demand.
         // Cost combines distance in hops, utilization after reservation and physical length.
-        public List<int> FindOptimalPath(int start, int goal, float demand)
+        public List<int> FindOptimalPath(int start, int goal, float demand, List<int> excludedLinks = null)
         {
             if (start < 0 || goal < 0 || start >= Nodes.Count || goal >= Nodes.Count ||
                 Nodes[start].Failed || Nodes[goal].Failed || !Nodes[start].AdminEnabled || !Nodes[goal].AdminEnabled || demand <= 0f) return null;
@@ -358,7 +390,9 @@ namespace NetworkCollapse
                 for (int i = 0; i < Links.Count; i++)
                 {
                     var link = Links[i];
-                    if (link.Failed || link.Capacity <= 0f || link.Capacity - link.Load + 0.0001f < demand) continue;
+                    if (link.Failed || (excludedLinks != null && excludedLinks.Contains(i)) || link.Capacity <= 0f || link.Capacity - link.Load + 0.0001f < demand ||
+                        !Interfaces.Exists(n => n.LinkIndex == i && n.NodeId == link.A && n.AdminUp) ||
+                        !Interfaces.Exists(n => n.LinkIndex == i && n.NodeId == link.B && n.AdminUp)) continue;
                     int next = link.A == current ? link.B : link.B == current ? link.A : -1;
                     if (next < 0 || visited[next] || Nodes[next].Failed || !Nodes[next].AdminEnabled) continue;
                     float utilization = Mathf.Clamp01((link.Load + demand) / link.Capacity);
@@ -382,6 +416,40 @@ namespace NetworkCollapse
 
         public List<int> FindDisplayRoute(int source) =>
             source > 0 && source < Nodes.Count ? FindOptimalPath(source, 0, Nodes[source].Demand) : null;
+
+        private void RebuildDerivedTables()
+        {
+            RoutingTables.Clear(); NeighborTables.Clear(); SwitchingTables.Clear(); Vlans.Clear();
+            foreach (var node in Nodes)
+            {
+                var routing = new RoutingTable { NodeId = node.Id };
+                if (PrimaryPaths.TryGetValue(node.Id, out var primary) && primary.Count > 0)
+                {
+                    int li = primary[0]; var link = Links[li];
+                    routing.Routes.Add(new RouteEntry { Destination = "0.0.0.0", PrefixLength = 0,
+                        NextHop = link.A == node.Id ? link.EndpointB : link.EndpointA,
+                        OutInterface = "eth" + li, Metric = 10, Active = true });
+                }
+                if (BackupPaths.TryGetValue(node.Id, out var backup) && backup.Count > 0)
+                {
+                    int li = backup[0]; var link = Links[li];
+                    routing.Routes.Add(new RouteEntry { Destination = "0.0.0.0", PrefixLength = 0,
+                        NextHop = link.A == node.Id ? link.EndpointB : link.EndpointA,
+                        OutInterface = "eth" + li, Metric = 20, Active = false });
+                }
+                RoutingTables.Add(routing);
+                NeighborTables.Add(new NeighborTable { NodeId = node.Id });
+                SwitchingTables.Add(new SwitchingTable { NodeId = node.Id });
+                if (!Vlans.Exists(v => v.Id == node.VlanId))
+                    Vlans.Add(new VLAN { Id = node.VlanId, Name = "VLAN " + node.VlanId });
+                Vlans.Find(v => v.Id == node.VlanId).MemberNodes.Add(node.Id);
+            }
+            foreach (var iface in Interfaces)
+            {
+                var link = Links[iface.LinkIndex];
+                iface.OperationalUp = iface.AdminUp && !link.Failed && !Nodes[link.A].Failed && !Nodes[link.B].Failed;
+            }
+        }
 
         /// <summary>Start timed repair of a failed node (costs money, takes time).</summary>
         public bool StartNodeRepair(int id)

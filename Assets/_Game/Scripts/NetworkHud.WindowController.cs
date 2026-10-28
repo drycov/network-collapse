@@ -32,6 +32,8 @@ namespace NetworkCollapse
                 tab == "inventory" ? inventoryTab :
                 tab == "market" ? (marketController != null ? marketController.Root : marketTab) : settingsTab;
             if (content == null) return;
+            if (tab == "missions" && missionsTab != null) missionsTab.style.display = DisplayStyle.Flex;
+            if (tab == "market" && marketTab != null) marketTab.style.display = DisplayStyle.Flex;
             // Reparent only when switching screens; avoid resetting scroll position on redundant calls.
             if (windowContent.childCount == 1 && windowContent[0] == content)
             {

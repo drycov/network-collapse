@@ -12,7 +12,8 @@ namespace NetworkCollapse
         private ThemeStyleSheet runtimeTheme;
         private Label kpis, details, title, objectiveLabel, statusBar;
         private Button repair, failure, build, upgrade, repairLink, nextLevel;
-        private Label connectionInfo, eventLog, missionLabel, storyLabel, achievementLabel, inventoryLabel;
+        private Label connectionInfo, eventLog, missionLabel, storyLabel, achievementLabel, inventoryLabel, boardLabel, incidentLabel, dialogueLabel;
+        public event Action<int> UpgradeDeviceRequested;
         private VisualElement operationsTab, missionsTab, inventoryTab, deviceConfigSection;
         private string activeTab = "operations";
         private NetworkCampaign campaign;
@@ -138,6 +139,12 @@ namespace NetworkCollapse
             missionsTab.Add(storyLabel);
             missionLabel = Body("");
             missionsTab.Add(missionLabel);
+            missionsTab.Add(Heading("ДОСКА ЗАДАНИЙ", 14));
+            boardLabel = Body(""); missionsTab.Add(boardLabel);
+            missionsTab.Add(Heading("СВЯЗЬ С ДИСПЕТЧЕРСКОЙ", 14));
+            dialogueLabel = Body(""); missionsTab.Add(dialogueLabel);
+            missionsTab.Add(Heading("КАРТА ИНЦИДЕНТОВ", 14));
+            incidentLabel = Body(""); missionsTab.Add(incidentLabel);
             missionsTab.Add(Heading("ДОСТИЖЕНИЯ", 14));
             achievementLabel = Body("");
             missionsTab.Add(achievementLabel);
@@ -172,6 +179,7 @@ namespace NetworkCollapse
             deviceConfigSection.Add(adminToggle);
             deviceConfigSection.Add(routingToggle);
             deviceConfigSection.Add(applyConfig);
+            deviceConfigSection.Add(ActionButton("Модернизировать оборудование (40)", () => UpgradeDeviceRequested?.Invoke(SelectedId)));
             failure = ActionButton("Создать аварию", () => DeviceAction?.Invoke(SelectedId));
             repair = ActionButton("Ремонт узла (15)", () => DeviceAction?.Invoke(SelectedId));
             right.Add(failure);
@@ -342,6 +350,12 @@ namespace NetworkCollapse
             {
                 storyLabel.text = campaign.StoryBriefing;
                 missionLabel.text = campaign.MissionText();
+                boardLabel.text = campaign.MissionBoard();
+                dialogueLabel.text = campaign.StoryBriefing;
+                var incidents = new System.Collections.Generic.List<string>();
+                foreach (var node in model.Nodes) if (node.Failed) incidents.Add("[NODE] " + node.Hostname + " · " + node.Status);
+                for (int i = 0; i < model.Links.Count; i++) if (model.Links[i].Failed) incidents.Add("[LINK] #" + i + " N" + model.Links[i].A + " ↔ N" + model.Links[i].B);
+                incidentLabel.text = incidents.Count == 0 ? "NO ACTIVE INCIDENTS" : string.Join("\n", incidents);
                 achievementLabel.text = campaign.AchievementText();
                 inventoryLabel.text = campaign.InventoryText();
                 statusBar.text =

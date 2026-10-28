@@ -81,6 +81,16 @@ namespace NetworkCollapse
 
         public int TickCount { get; private set; }
         public int Money { get; private set; } = 150;
+        public int EquipmentUpgrades { get; private set; }
+        public bool UpgradeDevice(int id)
+        {
+            if (GameOver || id < 0 || id >= Nodes.Count || Money < 40 || Nodes[id].Failed) return false;
+            Money -= 40;
+            Nodes[id].Capacity += Nodes[id].Tier == EquipmentTier.Core ? 80 : 35;
+            EquipmentUpgrades++;
+            Step();
+            return true;
+        }
         public void GrantCredits(int amount) { if (amount > 0) Money += amount; }
         public float Availability { get; private set; } = 1f;
         public float DroppedTraffic { get; private set; }

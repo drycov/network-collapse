@@ -46,6 +46,7 @@ namespace NetworkCollapse
             elapsed += Time.deltaTime;
             if (elapsed >= 2f) { elapsed = 0; simulation.Step(); }
             if (Input.GetKeyDown(KeyCode.Space)) simulation.RandomFailure();
+            if (Input.GetKeyDown(KeyCode.R)) simulation = new NetworkSimulation();
             if (Input.GetMouseButtonDown(0) && !OverHud(Input.mousePosition))
             {
                 Vector3 world = gameCamera.ScreenToWorldPoint(Input.mousePosition);
@@ -70,7 +71,7 @@ namespace NetworkCollapse
             foreach (var node in simulation.Nodes)
             {
                 Vector2 pos = Project(node.Position);
-                Color c = node.Failed ? new Color(0.95f, 0.24f, 0.27f) : node.Id == 0 ? new Color(0.98f, 0.8f, 0.28f) : new Color(0.24f, 0.9f, 0.71f);
+                Color c = node.Failed ? new Color(0.95f, 0.24f, 0.27f) : node.Status == NodeStatus.Overloaded ? new Color(1f, 0.47f, 0.16f) : node.Id == 0 ? new Color(0.98f, 0.8f, 0.28f) : new Color(0.24f, 0.9f, 0.71f);
                 DrawRect(new Rect(pos.x - 10, pos.y - 10, 20, 20), c);
                 GUI.Label(new Rect(pos.x + 13, pos.y - 13, 60, 22), "N" + node.Id, label);
             }
@@ -78,9 +79,9 @@ namespace NetworkCollapse
             GUI.Label(new Rect(25, 24, 270, 34), "NETWORK COLLAPSE", header);
             GUI.Label(new Rect(25, 65, 270, 24), $"Доступность: {simulation.Availability:P0}", label);
             GUI.Label(new Rect(25, 92, 270, 24), $"Бюджет: {simulation.Money} | Тик: {simulation.TickCount}", label);
-            GUI.Label(new Rect(25, 119, 270, 24), "Красный узел: авария", label);
+            GUI.Label(new Rect(25, 119, 270, 24), $"Аварий: {simulation.FailedNodes} | Потеря: {simulation.DroppedTraffic:0.0}", label);
             if (GUI.Button(new Rect(25, 155, 254, 43), "СЛУЧАЙНАЯ АВАРИЯ [SPACE]", button)) simulation.RandomFailure();
-            GUI.Label(new Rect(Screen.width - 345, Screen.height - 32, 340, 25), "Клик: вывести узел из строя / починить (15)", label);
+            GUI.Label(new Rect(Screen.width - 440, Screen.height - 32, 435, 25), "Клик: авария / ремонт (15)  |  R: новая игра", label);
         }
 
         private Vector2 Project(Vector2 world)

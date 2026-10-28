@@ -107,6 +107,71 @@ namespace NetworkCollapse
         public bool ObjectiveComplete { get; private set; }
         public bool GameOver { get; private set; }
 
+        [Serializable] public sealed class Snapshot
+        {
+            public int Level, Money, Score, TickCount, EquipmentUpgrades;
+            public float ObjectiveProgress;
+            public bool ObjectiveComplete, GameOver;
+            public List<NetworkNode> Nodes = new List<NetworkNode>();
+            public List<NetworkLink> Links = new List<NetworkLink>();
+        }
+        public Snapshot Capture()
+        {
+            var s = new Snapshot { Level = Level, Money = Money, Score = Score,
+                TickCount = TickCount, ObjectiveProgress = ObjectiveProgress,
+                ObjectiveComplete = ObjectiveComplete, GameOver = GameOver,
+                EquipmentUpgrades = EquipmentUpgrades };
+            foreach (var node in Nodes) s.Nodes.Add(UnityEngine.JsonUtility.FromJson<NetworkNode>(UnityEngine.JsonUtility.ToJson(node)));
+            foreach (var link in Links) s.Links.Add(UnityEngine.JsonUtility.FromJson<NetworkLink>(UnityEngine.JsonUtility.ToJson(link)));
+            return s;
+        }
+        public bool Restore(Snapshot s)
+        {
+            if (s == null || s.Nodes == null || s.Links == null || s.Nodes.Count < 2) return false;
+            foreach (var link in s.Links)
+                if (link.A < 0 || link.B < 0 || link.A >= s.Nodes.Count || link.B >= s.Nodes.Count) return false;
+            Nodes.Clear(); Links.Clear();
+            Nodes.AddRange(s.Nodes); Links.AddRange(s.Links);
+            Level = Mathf.Max(1, s.Level); Money = Mathf.Max(0, s.Money);
+            Score = Mathf.Max(0, s.Score); TickCount = Mathf.Max(0, s.TickCount);
+            ObjectiveProgress = Mathf.Max(0, s.ObjectiveProgress);
+            ObjectiveComplete = s.ObjectiveComplete; GameOver = s.GameOver;
+            EquipmentUpgrades = Mathf.Max(0, s.EquipmentUpgrades);
+            TargetAvailability = Mathf.Clamp(.80f + Level * .015f, .80f, .93f);
+            ObjectiveTimer = 70f + Level * 10f;
+            Interfaces.Clear(); Subnets.Clear(); RoutingTables.Clear(); NeighborTables.Clear(); SwitchingTables.Clear(); Vlans.Clear();
+            for (int i = 0; i < Links.Count; i++)
+            {
+                var l = Links[i];
+                Interfaces.Add(new NetworkInterface { NodeId = l.A, LinkIndex = i, Name = "eth" + i, Ipv4Address = l.EndpointA, VlanId = Nodes[l.A].VlanId, Mtu = Nodes[l.A].Mtu, AdminUp = Nodes[l.A].AdminEnabled });
+                Interfaces.Add(new NetworkInterface { NodeId = l.B, LinkIndex = i, Name = "eth" + i, Ipv4Address = l.EndpointB, VlanId = Nodes[l.B].VlanId, Mtu = Nodes[l.B].Mtu, AdminUp = Nodes[l.B].AdminEnabled });
+                Subnets.Add(new Subnet { NetworkAddress = l.EndpointA, PrefixLength = 31, Purpose = "Restored link " + i });
+            }
+            // Recompute derived routing without advancing mission timers or economy.
+            RecomputeTrafficOnly();
+            return true;
+        }
+        private void RecomputeTrafficOnly()
+        {
+            foreach (var n in Nodes) n.Load = 0;
+            foreach (var l in Links) { l.Load = 0; l.FlowAB = 0; }
+            PrimaryPaths.Clear(); BackupPaths.Clear(); PrimaryTraffic.Clear(); BackupTraffic.Clear();
+            float requested = 0, delivered = 0;
+            for (int i = 1; i < Nodes.Count; i++)
+            {
+                var n = Nodes[i]; requested += n.Demand;
+                if (n.Failed || !n.AdminEnabled) continue;
+                var path = FindOptimalPath(i, 0, n.Demand);
+                if (path == null) continue;
+                PrimaryPaths[i] = path; PrimaryTraffic[i] = n.Demand;
+                RecordFlow(path, i, n.Demand);
+                n.Load += n.Demand; Nodes[0].Load += n.Demand; delivered += n.Demand;
+            }
+            Availability = requested > 0 ? delivered / requested : 1f;
+            DroppedTraffic = Mathf.Max(0, requested - delivered);
+            RebuildDerivedTables();
+        }
+
         public NetworkSimulation(int seed = 2026, int level = 1)
         {
             random = new System.Random(seed + level * 97);

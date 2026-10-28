@@ -17,10 +17,14 @@ namespace NetworkCollapse
         private bool incidentPending;
         private int lastVoicedChapter = -1;
         private const string SaveKey = "NetworkCollapse.Campaign.v1";
+        private const string NetworkSaveKey = "NetworkCollapse.Network.v1";
+        private bool firstRunTutorial;
+        private int tutorialStep;
         private void SaveCampaign()
         {
             if (campaign == null) return;
             PlayerPrefs.SetString(SaveKey, JsonUtility.ToJson(campaign.Capture()));
+            if (simulation != null) PlayerPrefs.SetString(NetworkSaveKey, JsonUtility.ToJson(simulation.Capture()));
             PlayerPrefs.Save();
         }
         private void LoadCampaign()
@@ -77,6 +81,7 @@ namespace NetworkCollapse
                 {
                     hud.AddEvent($"Канал N{a:00}–N{b:00} построен");
                     campaign.OnAction(MissionKind.BuildLink);
+                    if (firstRunTutorial && tutorialStep == 2) { firstRunTutorial = false; PlayerPrefs.SetInt("NetworkCollapse.TutorialSeen", 1); hud.SetTutorial(""); SaveCampaign(); }
                     audio.Play(SoundCue.LinkBuilt);
                     map.SetBuildPreview(-1, Vector3.zero);
                     hud.Select(a);
@@ -146,6 +151,13 @@ namespace NetworkCollapse
         {
             paused = false;
             simulation = new NetworkSimulation();
+            firstRunTutorial = !PlayerPrefs.HasKey("NetworkCollapse.TutorialSeen");
+            tutorialStep = 0;
+            if (PlayerPrefs.HasKey(NetworkSaveKey))
+            {
+                try { simulation.Restore(JsonUtility.FromJson<NetworkSimulation.Snapshot>(PlayerPrefs.GetString(NetworkSaveKey))); }
+                catch (System.Exception ex) { Debug.LogWarning("Network save rejected: " + ex.Message); }
+            }
             campaign = new NetworkCampaign();
             campaign.Notification += message => { hud.AddEvent(message); audio.Play(message.StartsWith("Достижение:") ? SoundCue.Achievement : SoundCue.Mission); };
             campaign.CreditsAwarded += amount => simulation.GrantCredits(amount);
@@ -159,6 +171,7 @@ namespace NetworkCollapse
             hud.SetCampaign(campaign);
             hud.Select(-1);
             hud.SetPaused(false);
+            hud.SetTutorial(firstRunTutorial ? "ОБУЧЕНИЕ 1/3: Выберите любой узел сети на карте." : "");
             hud.AddEvent("Диспетчерская запущена · " + campaign.ChapterTitle);
             hud.AddEvent(campaign.StoryBriefing);
             lastVoicedChapter = campaign.Chapter;
@@ -210,7 +223,7 @@ namespace NetworkCollapse
         {
             if (Input.GetKeyDown(KeyCode.P)) TogglePause();
             if (Input.GetKeyDown(KeyCode.Alpha1)) hud.SelectScreen(0);
-            if (Input.GetKeyDown(KeyCode.Alpha2)) hud.SelectScreen(1);
+            if (Input.GetKeyDown(KeyCode.Alpha2)) { hud.SelectScreen(1); if (firstRunTutorial && tutorialStep == 1) { tutorialStep = 2; hud.SetTutorial("ОБУЧЕНИЕ 3/3: Нажмите 1, включите строительство и соедините два узла."); } }
             if (Input.GetKeyDown(KeyCode.Alpha3)) hud.SelectScreen(2);
             if (!paused) elapsed += Time.deltaTime;
             while (!paused && elapsed >= 2f)
@@ -268,6 +281,7 @@ namespace NetworkCollapse
                     {
                         map.SetSelected(id);
                         hud.Select(id);
+                        if (firstRunTutorial && tutorialStep == 0) { tutorialStep = 1; hud.SetTutorial("ОБУЧЕНИЕ 2/3: Нажмите 2 для просмотра заданий."); }
                         audio.Play(SoundCue.Select);
                         map.HighlightRoute(id);
                     }

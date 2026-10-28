@@ -18,6 +18,7 @@ namespace NetworkCollapse
         private int lastVoicedChapter = -1;
         private const string SaveKey = "NetworkCollapse.Campaign.v1";
         private const string NetworkSaveKey = "NetworkCollapse.Network.v1";
+        private bool restoreOnNextReset = true;
         private bool firstRunTutorial;
         private int tutorialStep;
         private void SaveCampaign()
@@ -156,10 +157,13 @@ namespace NetworkCollapse
         private void ResetGame()
         {
             paused = false;
+            bool restore = restoreOnNextReset;
+            restoreOnNextReset = false;
+            if (!restore) { PlayerPrefs.DeleteKey(NetworkSaveKey); PlayerPrefs.DeleteKey(SaveKey); }
             simulation = new NetworkSimulation();
             firstRunTutorial = !PlayerPrefs.HasKey("NetworkCollapse.TutorialSeen");
             tutorialStep = 0;
-            if (PlayerPrefs.HasKey(NetworkSaveKey))
+            if (restore && PlayerPrefs.HasKey(NetworkSaveKey))
             {
                 try { simulation.Restore(JsonUtility.FromJson<NetworkSimulation.Snapshot>(PlayerPrefs.GetString(NetworkSaveKey))); }
                 catch (System.Exception ex) { Debug.LogWarning("Network save rejected: " + ex.Message); }
@@ -168,7 +172,7 @@ namespace NetworkCollapse
             campaign.Notification += message => { hud.AddEvent(message); audio.Play(message.StartsWith("Достижение:") ? SoundCue.Achievement : SoundCue.Mission); };
             campaign.CreditsAwarded += amount => simulation.GrantCredits(amount);
             campaign.StateChanged += SaveCampaign;
-            LoadCampaign();
+            if (restore) LoadCampaign();
             incidentPending = false;
             selectingTarget = false;
             elapsed = 0f;

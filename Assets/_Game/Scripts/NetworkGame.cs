@@ -41,12 +41,27 @@ namespace NetworkCollapse
             hud.BuildLinkRequested += (a, b) => { if (simulation.BuildLink(a, b)) Refresh(); };
             hud.UpgradeLinkRequested += id => { if (simulation.UpgradeLink(id)) Refresh(); };
             hud.RepairLinkRequested += id => { if (simulation.RepairLink(id)) Refresh(); };
+            hud.NextLevelRequested += OnNextLevel;
             ResetGame();
         }
 
         private void ResetGame()
         {
             simulation = new NetworkSimulation();
+            selectingTarget = false;
+            elapsed = 0f;
+            map.Initialize(simulation);
+            hud.Initialize(simulation);
+            hud.Select(-1);
+            cameraController.ResetView();
+        }
+
+        private void OnNextLevel()
+        {
+            if (!simulation.ObjectiveComplete) return;
+            int next = simulation.Level + 1;
+            // Keep score/money continuity via AdvanceToNextLevel
+            simulation.AdvanceToNextLevel();
             selectingTarget = false;
             elapsed = 0f;
             map.Initialize(simulation);
@@ -82,15 +97,20 @@ namespace NetworkCollapse
                 simulation.Step(2f);
                 Refresh();
             }
+
             bool overPanel = hud.IsPointerOverHud(Input.mousePosition);
             cameraController.PointerOverHud = overPanel;
+
             if (Input.GetKeyDown(KeyCode.Space)) RandomFailure();
             if (Input.GetKeyDown(KeyCode.R)) ResetGame();
             if (Input.GetKeyDown(KeyCode.B) && hud.SelectedId >= 0) selectingTarget = true;
             if (Input.GetKeyDown(KeyCode.Escape)) selectingTarget = false;
+
             if (Input.GetMouseButtonDown(0) && !overPanel)
             {
-                int id = map.HitTest(cameraController.ScreenWorld(Input.mousePosition));
+                Vector3 world = cameraController.ScreenWorld(Input.mousePosition);
+                int id = map.HitTest(world);
+
                 if (selectingTarget && id >= 0 && id != hud.SelectedId)
                 {
                     hud.SelectTarget(id);
@@ -99,8 +119,17 @@ namespace NetworkCollapse
                 }
                 else if (!selectingTarget)
                 {
-                    map.SetSelected(id);
-                    hud.Select(id);
+                    if (id >= 0)
+                    {
+                        map.SetSelected(id);
+                        hud.Select(id);
+                    }
+                    else
+                    {
+                        // Optional: click empty space clears selection
+                        // map.SetSelected(-1);
+                        // hud.Select(-1);
+                    }
                 }
             }
         }

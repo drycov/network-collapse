@@ -26,6 +26,40 @@ namespace NetworkCollapse
         private int selectedLink = -1;
         private float clock;
         private EquipmentTier? visibleTier;
+        private readonly HashSet<int> routeLinks = new HashSet<int>();
+        private int routeSource = -1;
+        public bool ShowRoutes { get; private set; } = true;
+        public void SetRouteVisibility(bool enabled) { ShowRoutes = enabled; Refresh(); }
+        public void HighlightRoute(int source)
+        {
+            routeSource = source;
+            routeLinks.Clear();
+            if (simulation == null || source <= 0 || source >= simulation.Nodes.Count || simulation.Nodes[source].Failed || simulation.Nodes[0].Failed) { Refresh(); return; }
+            var visited = new bool[simulation.Nodes.Count];
+            var parentNode = new int[simulation.Nodes.Count];
+            var parentLink = new int[simulation.Nodes.Count];
+            var queue = new Queue<int>();
+            queue.Enqueue(source);
+            visited[source] = true;
+            while (queue.Count > 0)
+            {
+                int current = queue.Dequeue();
+                if (current == 0) break;
+                for (int i = 0; i < simulation.Links.Count; i++)
+                {
+                    var link = simulation.Links[i];
+                    if (link.Failed || link.Load <= 0 || simulation.Nodes[link.A].Failed || simulation.Nodes[link.B].Failed) continue;
+                    int next = link.A == current ? link.B : link.B == current ? link.A : -1;
+                    if (next < 0 || visited[next]) continue;
+                    visited[next] = true;
+                    parentNode[next] = current;
+                    parentLink[next] = i;
+                    queue.Enqueue(next);
+                }
+            }
+            if (visited[0]) for (int n = 0; n != source; n = parentNode[n]) routeLinks.Add(parentLink[n]);
+            Refresh();
+        }
         public void SetTierFilter(EquipmentTier? tier) { visibleTier = tier; Refresh(); }
 
         public int SelectedNode => selected;
@@ -83,6 +117,8 @@ namespace NetworkCollapse
             selected = -1;
             secondSelected = -1;
             selectedLink = -1;
+            routeLinks.Clear();
+            routeSource = -1;
             Refresh();
         }
 
@@ -193,12 +229,13 @@ namespace NetworkCollapse
                     : Color.Lerp(new Color(.12f, .62f, .77f), new Color(1f, .48f, .22f),
                         Mathf.Clamp01(link.Capacity > 0 ? link.Load / link.Capacity : 1));
 
-                if (i == selectedLink)
-                    col = Color.Lerp(col, Color.white, 0.5f);
+                if (ShowRoutes && routeLinks.Contains(i)) col = new Color(.95f, .94f, .29f);
+                if (i == selectedLink) col = Color.white;
 
                 linkViews[i].startColor = linkViews[i].endColor = col;
                 float w = down ? .04f : Mathf.Lerp(.05f, .095f, Mathf.Clamp01(link.Load / Mathf.Max(1f, link.Capacity)));
                 if (link.PlayerBuilt) w += .015f;
+                if (ShowRoutes && routeLinks.Contains(i)) w = .16f;
                 linkViews[i].startWidth = linkViews[i].endWidth = w;
                 linkViews[i].SetPosition(0, simulation.Nodes[link.A].Position);
                 linkViews[i].SetPosition(1, simulation.Nodes[link.B].Position);

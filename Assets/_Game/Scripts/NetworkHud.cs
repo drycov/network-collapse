@@ -13,6 +13,8 @@ namespace NetworkCollapse
         private Label kpis, details, title, objectiveLabel, statusBar;
         private Button repair, failure, build, upgrade, repairLink, nextLevel;
         private Label connectionInfo, eventLog, missionLabel, storyLabel, achievementLabel, inventoryLabel;
+        private VisualElement operationsTab, missionsTab, inventoryTab, deviceConfigSection;
+        private string activeTab = "operations";
         private NetworkCampaign campaign;
         public event Action<string> UseInventoryRequested;
         private Button modeButton;
@@ -95,46 +97,59 @@ namespace NetworkCollapse
             objectiveLabel = Body("");
             left.Add(objectiveLabel);
 
-            left.Add(Heading("УПРАВЛЕНИЕ", 15));
+            var nav = new VisualElement();
+            nav.style.flexDirection = FlexDirection.Row;
+            nav.style.flexShrink = 0;
+            nav.Add(TabButton("СЕТЬ", () => ShowTab("operations")));
+            nav.Add(TabButton("МИССИИ", () => ShowTab("missions")));
+            nav.Add(TabButton("СКЛАД", () => ShowTab("inventory")));
+            left.Add(nav);
+            operationsTab = new VisualElement();
+            missionsTab = new VisualElement();
+            inventoryTab = new VisualElement();
+            left.Add(operationsTab);
+            left.Add(missionsTab);
+            left.Add(inventoryTab);
+            operationsTab.Add(Heading("УПРАВЛЕНИЕ", 15));
             modeButton = ActionButton("Режим строительства: выкл.", () => { BuildMode = !BuildMode; BuildModeChanged?.Invoke(BuildMode); Refresh(); });
-            left.Add(modeButton);
-            left.Add(Heading("СЛОИ ТОПОЛОГИИ", 14));
-            left.Add(Body("ROUTER hex · L3 square · ACCESS ring\nCORE жёлтый · DIST синий · ACCESS зелёный\nPRIMARY жёлтый · BACKUP фиолетовый"));
-            left.Add(ActionButton("Все категории", () => FilterChanged?.Invoke(null)));
-            left.Add(ActionButton("Core", () => FilterChanged?.Invoke(EquipmentTier.Core)));
-            left.Add(ActionButton("Distribution", () => FilterChanged?.Invoke(EquipmentTier.Distribution)));
-            left.Add(ActionButton("Access", () => FilterChanged?.Invoke(EquipmentTier.Access)));
+            operationsTab.Add(modeButton);
+            operationsTab.Add(Heading("СЛОИ ТОПОЛОГИИ", 14));
+            operationsTab.Add(Body("ROUTER hex · L3 square · ACCESS ring\nCORE жёлтый · DIST синий · ACCESS зелёный\nPRIMARY жёлтый · BACKUP фиолетовый"));
+            operationsTab.Add(ActionButton("Все категории", () => FilterChanged?.Invoke(null)));
+            operationsTab.Add(ActionButton("Core", () => FilterChanged?.Invoke(EquipmentTier.Core)));
+            operationsTab.Add(ActionButton("Distribution", () => FilterChanged?.Invoke(EquipmentTier.Distribution)));
+            operationsTab.Add(ActionButton("Access", () => FilterChanged?.Invoke(EquipmentTier.Access)));
             routeButton = ActionButton("Маршруты: включены", () => { routesVisible = !routesVisible; RouteVisibilityChanged?.Invoke(routesVisible); Refresh(); });
-            left.Add(routeButton);
-            left.Add(ActionButton("Случайная авария  [SPACE]", () => RandomFailureRequested?.Invoke()));
-            left.Add(ActionButton("Начать заново  [R]", () => ResetRequested?.Invoke()));
+            operationsTab.Add(routeButton);
+            operationsTab.Add(ActionButton("Случайная авария  [SPACE]", () => RandomFailureRequested?.Invoke()));
+            operationsTab.Add(ActionButton("Начать заново  [R]", () => ResetRequested?.Invoke()));
             nextLevel = ActionButton("Следующий уровень", () => NextLevelRequested?.Invoke());
-            left.Add(nextLevel);
+            operationsTab.Add(nextLevel);
 
-            left.Add(Heading("СЦЕНАРИИ АВАРИЙ", 14));
-            left.Add(ActionButton("Обрыв волокна", () => IncidentRequested?.Invoke(IncidentScenario.FiberCut)));
-            left.Add(ActionButton("Отказ питания", () => IncidentRequested?.Invoke(IncidentScenario.PowerFailure)));
-            left.Add(ActionButton("Каскадный сбой", () => IncidentRequested?.Invoke(IncidentScenario.Cascade)));
+            operationsTab.Add(Heading("СЦЕНАРИИ АВАРИЙ", 14));
+            operationsTab.Add(ActionButton("Обрыв волокна", () => IncidentRequested?.Invoke(IncidentScenario.FiberCut)));
+            operationsTab.Add(ActionButton("Отказ питания", () => IncidentRequested?.Invoke(IncidentScenario.PowerFailure)));
+            operationsTab.Add(ActionButton("Каскадный сбой", () => IncidentRequested?.Invoke(IncidentScenario.Cascade)));
 
-            left.Add(Heading("MISSION CONTROL / СЮЖЕТ", 14));
+            missionsTab.Add(Heading("MISSION CONTROL / СЮЖЕТ", 14));
             storyLabel = Body("");
-            left.Add(storyLabel);
+            missionsTab.Add(storyLabel);
             missionLabel = Body("");
-            left.Add(missionLabel);
-            left.Add(Heading("ДОСТИЖЕНИЯ", 14));
+            missionsTab.Add(missionLabel);
+            missionsTab.Add(Heading("ДОСТИЖЕНИЯ", 14));
             achievementLabel = Body("");
-            left.Add(achievementLabel);
-            left.Add(Heading("ИНВЕНТАРЬ", 14));
+            missionsTab.Add(achievementLabel);
+            missionsTab.Add(Heading("ИНВЕНТАРЬ", 14));
             inventoryLabel = Body("");
-            left.Add(inventoryLabel);
-            left.Add(ActionButton("Ремонтный комплект", () => UseInventoryRequested?.Invoke("repair")));
-            left.Add(ActionButton("Резервный трансивер", () => UseInventoryRequested?.Invoke("reserve")));
-            left.Add(ActionButton("Патч-корд 10G", () => UseInventoryRequested?.Invoke("patch")));
+            missionsTab.Add(inventoryLabel);
+            missionsTab.Add(ActionButton("Ремонтный комплект", () => UseInventoryRequested?.Invoke("repair")));
+            missionsTab.Add(ActionButton("Резервный трансивер", () => UseInventoryRequested?.Invoke("reserve")));
+            missionsTab.Add(ActionButton("Патч-корд 10G", () => UseInventoryRequested?.Invoke("patch")));
 
-            left.Add(Heading("ЖУРНАЛ СОБЫТИЙ", 14));
+            missionsTab.Add(Heading("ЖУРНАЛ СОБЫТИЙ", 14));
             eventLog = Body("");
-            left.Add(eventLog);
-            left.Add(Body("ЛКМ — узел/канал\nСтроительство — два узла\nПКМ/СКМ — панорама · F — центр"));
+            missionsTab.Add(eventLog);
+            operationsTab.Add(Body("ЛКМ — узел/канал\nСтроительство — два узла\nПКМ/СКМ — панорама · F — центр"));
 
             var right = Panel(338);
             root.Add(right);
@@ -142,17 +157,19 @@ namespace NetworkCollapse
             right.Add(title);
             details = Body("Выберите узел на карте.");
             right.Add(details);
-            right.Add(Heading("КОНФИГУРАЦИЯ УСТРОЙСТВА", 14));
+            deviceConfigSection = new VisualElement();
+            right.Add(deviceConfigSection);
+            deviceConfigSection.Add(Heading("КОНФИГУРАЦИЯ УСТРОЙСТВА", 14));
             vlanField = new IntegerField("VLAN ID");
             mtuField = new IntegerField("MTU");
-            right.Add(vlanField);
-            right.Add(mtuField);
+            deviceConfigSection.Add(vlanField);
+            deviceConfigSection.Add(mtuField);
             adminToggle = ActionButton("Административно: включено", () => { if (SelectedId < 0) return; desiredAdmin = !desiredAdmin; UpdateConfigButtons(); });
             routingToggle = ActionButton("Routing: Static", () => { if (SelectedId < 0) return; desiredRouting = desiredRouting == RoutingMode.Static ? RoutingMode.OspfSimulated : RoutingMode.Static; UpdateConfigButtons(); });
             applyConfig = ActionButton("Применить настройки", () => ConfigureDeviceRequested?.Invoke(SelectedId, vlanField.value, mtuField.value, desiredAdmin, desiredRouting));
-            right.Add(adminToggle);
-            right.Add(routingToggle);
-            right.Add(applyConfig);
+            deviceConfigSection.Add(adminToggle);
+            deviceConfigSection.Add(routingToggle);
+            deviceConfigSection.Add(applyConfig);
             failure = ActionButton("Создать аварию", () => DeviceAction?.Invoke(SelectedId));
             repair = ActionButton("Ремонт узла (15)", () => DeviceAction?.Invoke(SelectedId));
             right.Add(failure);
@@ -166,6 +183,7 @@ namespace NetworkCollapse
             right.Add(build);
             right.Add(upgrade);
             right.Add(repairLink);
+            ShowTab(activeTab);
             Refresh();
             if (eventLog != null) eventLog.text = string.Join("\n", events);
         }
@@ -178,7 +196,9 @@ namespace NetworkCollapse
             panel.style.paddingRight = 14;
             panel.style.paddingTop = 14;
             panel.style.paddingBottom = 14;
-            panel.style.maxHeight = Length.Percent(96);
+            panel.style.height = Length.Percent(100);
+            panel.style.maxHeight = Length.Percent(100);
+            panel.style.flexShrink = 0;
             // Fully opaque terminal panels (no alpha glass)
             panel.style.backgroundColor = new Color(.012f, .05f, .07f, 1f);
             panel.style.borderLeftWidth = 3;
@@ -201,6 +221,7 @@ namespace NetworkCollapse
             label.style.fontSize = size;
             label.style.unityFontStyleAndWeight = FontStyle.Bold;
             label.style.marginBottom = 10;
+            label.style.flexShrink = 0;
             return label;
         }
 
@@ -210,6 +231,7 @@ namespace NetworkCollapse
             label.style.color = new Color(.72f, .88f, .86f);
             label.style.fontSize = 12;
             label.style.whiteSpace = WhiteSpace.Normal;
+            label.style.flexShrink = 0;
             label.style.marginBottom = 10;
             return label;
         }
@@ -218,6 +240,7 @@ namespace NetworkCollapse
         {
             var button = new Button(action) { text = text };
             button.style.height = 34;
+            button.style.flexShrink = 0;
             button.style.marginBottom = 7;
             button.style.backgroundColor = new Color(.04f, .16f, .19f, 1f);
             button.style.color = new Color(.55f, 1f, .87f);
@@ -228,6 +251,23 @@ namespace NetworkCollapse
             button.style.borderBottomLeftRadius = 0;
             button.style.borderBottomRightRadius = 0;
             return button;
+        }
+
+        private static Button TabButton(string title, Action action)
+        {
+            var button = ActionButton(title, action);
+            button.style.flexGrow = 1;
+            button.style.fontSize = 10;
+            button.style.marginRight = 3;
+            return button;
+        }
+
+        private void ShowTab(string tab)
+        {
+            activeTab = tab;
+            if (operationsTab != null) operationsTab.style.display = tab == "operations" ? DisplayStyle.Flex : DisplayStyle.None;
+            if (missionsTab != null) missionsTab.style.display = tab == "missions" ? DisplayStyle.Flex : DisplayStyle.None;
+            if (inventoryTab != null) inventoryTab.style.display = tab == "inventory" ? DisplayStyle.Flex : DisplayStyle.None;
         }
 
         public void SetCampaign(NetworkCampaign value)
@@ -336,6 +376,7 @@ namespace NetworkCollapse
             repairLink.SetEnabled(false);
 
             bool valid = SelectedId >= 0 && SelectedId < model.Nodes.Count;
+            if (deviceConfigSection != null) deviceConfigSection.style.display = valid ? DisplayStyle.Flex : DisplayStyle.None;
             vlanField.SetEnabled(valid && !model.GameOver);
             mtuField.SetEnabled(valid && !model.GameOver);
             adminToggle.SetEnabled(valid && !model.GameOver);

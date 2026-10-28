@@ -57,7 +57,7 @@ namespace NetworkCollapse
             Refresh();
         }
 
-        public void SetBuildPreview(int source, Vector3 world, int target = -1)
+        public void SetBuildPreview(int source, Vector3 world, int target = -1, LinkMedium medium = LinkMedium.Fiber, int speed = 100)
         {
             if (previewLine == null && simulation != null)
             {
@@ -77,7 +77,7 @@ namespace NetworkCollapse
                 ? (Vector3)simulation.Nodes[target].Position : new Vector3(world.x, world.y, 0);
             previewLine.SetPosition(0, simulation.Nodes[source].Position);
             previewLine.SetPosition(1, end);
-            bool allowed = target < 0 ? !simulation.GameOver : simulation.BuildBlockReason(source, target) == null;
+            bool allowed = target < 0 ? !simulation.GameOver : simulation.BuildBlockReason(source, target, medium, speed) == null;
             Color color = allowed ? new Color(.3f, 1f, .67f, .85f) : new Color(1f, .32f, .27f, .85f);
             previewLine.startColor = previewLine.endColor = color;
         }

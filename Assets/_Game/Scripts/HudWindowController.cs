@@ -51,7 +51,7 @@ namespace NetworkCollapse
         {
             if (content == null) return;
             if (title != null) title.text = caption;
-            if (scroll.childCount != 1 || scroll[0] != content)
+            if (scroll.contentContainer.childCount != 1 || scroll.contentContainer[0] != content)
             {
                 scroll.Clear();
                 content.style.flexShrink = 0;

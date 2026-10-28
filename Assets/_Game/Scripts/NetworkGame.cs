@@ -80,15 +80,17 @@ namespace NetworkCollapse
             {
                 if (!simulation.GameOver && simulation.BuildLink(a, b))
                 {
-                    hud.AddEvent($"Канал N{a:00}–N{b:00} построен");
+                    hud.AddEvent($"Канал N{a:00}–N{b:00} построен за {simulation.GetBuildCost(a, b)} кр.");
                     campaign.OnAction(MissionKind.BuildLink);
                     if (firstRunTutorial && tutorialStep == 2) { firstRunTutorial = false; PlayerPrefs.SetInt("NetworkCollapse.TutorialSeen", 1); hud.SetTutorial(""); SaveCampaign(); }
                     audio.Play(SoundCue.LinkBuilt);
                     map.SetBuildPreview(-1, Vector3.zero);
                     hud.Select(a);
                     map.SetSelected(a);
+                    SaveCampaign();
                     Refresh();
                 }
+                else { hud.AddEvent("Строительство отклонено: " + simulation.BuildBlockReason(a, b)); audio.Play(SoundCue.Error); }
             };
             hud.UpgradeLinkRequested += id =>
             {
@@ -265,6 +267,7 @@ namespace NetworkCollapse
             {
                 selectingTarget = false;
                 if (hud.BuildMode) hud.SetBuildMode(false);
+                if (hud.TargetId >= 0 && hud.SelectedId >= 0) { hud.Select(hud.SelectedId); map.SetSelected(hud.SelectedId); }
             }
 
             if ((hud.BuildMode || selectingTarget) && hud.SelectedId >= 0)

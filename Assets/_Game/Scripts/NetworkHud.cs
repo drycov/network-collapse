@@ -618,7 +618,7 @@ namespace NetworkCollapse
                 repairLink.text = $"Ремонт канала ({NetworkSimulation.LinkRepairCost})";
 
             connectionInfo.text = SelectedLinkId >= 0 && index >= 0 && index < model.Links.Count
-                ? $"Канал #{index}: N{model.Links[index].A:00} ↔ N{model.Links[index].B:00}\nНагрузка: {model.Links[index].Load:0.0}/{model.Links[index].Capacity:0.0}\nСостояние: {(model.Links[index].Failed ? "Авария" : "Работает")}\nПостроен игроком: {(model.Links[index].PlayerBuilt ? "Да" : "Нет")}"
+                ? $"Канал #{index}: N{model.Links[index].A:00} ↔ N{model.Links[index].B:00}\nНагрузка: {model.Links[index].Load:0.0}/{model.Links[index].Capacity:0.0}\nСостояние: {(model.Links[index].ConstructionRemaining > 0f ? "Монтаж " + model.Links[index].ConstructionRemaining.ToString("0.0") + "с" : model.Links[index].Failed ? "Авария" : "Работает")}\nСреда: {model.Links[index].Medium} · Порты: {model.Links[index].PortA}/{model.Links[index].PortB}\nМатериалы: {model.Links[index].MaterialCost} кр.\nПостроен игроком: {(model.Links[index].PlayerBuilt ? "Да" : "Нет")}"
                 : !pair
                     ? "Включите режим строительства и выберите два узла."
                     : index < 0

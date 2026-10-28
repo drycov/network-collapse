@@ -107,8 +107,8 @@ namespace NetworkCollapse
             connectionInfo = Body("Выберите узел, затем B и второй узел.");
             right.Add(connectionInfo);
             build = ActionButton("Построить канал (35)", () => BuildLinkRequested?.Invoke(SelectedId, TargetId));
-            upgrade = ActionButton("Улучшить канал (25)", () => UpgradeLinkRequested?.Invoke(FindSelectedLink()));
-            repairLink = ActionButton("Ремонт канала (12)", () => RepairLinkRequested?.Invoke(FindSelectedLink()));
+            upgrade = ActionButton("Улучшить канал (25)", () => UpgradeLinkRequested?.Invoke(ActiveLink()));
+            repairLink = ActionButton("Ремонт канала (12)", () => RepairLinkRequested?.Invoke(ActiveLink()));
             right.Add(build);
             right.Add(upgrade);
             right.Add(repairLink);
@@ -190,6 +190,7 @@ namespace NetworkCollapse
         }
 
         private int FindSelectedLink() => model == null ? -1 : model.FindLink(SelectedId, TargetId);
+        private int ActiveLink() => SelectedLinkId >= 0 ? SelectedLinkId : FindSelectedLink();
 
         public void Select(int id)
         {
@@ -238,7 +239,7 @@ namespace NetworkCollapse
             else
                 repair.text = $"Ремонт узла ({NetworkSimulation.RepairCost})";
 
-            int index = SelectedLinkId >= 0 ? SelectedLinkId : FindSelectedLink();
+            int index = ActiveLink();
             bool pair = (valid && TargetId >= 0 && TargetId != SelectedId) || SelectedLinkId >= 0;
             build.SetEnabled(!model.GameOver && valid && pair && index < 0 && model.Money >= NetworkSimulation.BuildCost);
             upgrade.SetEnabled(!model.GameOver && pair && index >= 0 && !model.Links[index].Failed &&

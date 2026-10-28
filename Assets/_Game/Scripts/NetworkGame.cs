@@ -77,6 +77,7 @@ namespace NetworkCollapse
             hud.CityExpansionRequested += i => MarketAction(world.OpenCity(simulation, i), true);
             hud.ContractRequested += (city, tariff) => MarketAction(world.SignCustomers(simulation, city, tariff));
             hud.RivalAcquisitionRequested += i => MarketAction(world.AcquireRival(simulation, i), true);
+            hud.RivalNegotiationRequested += (i, offer) => MarketAction(world.Negotiate(i, offer));
             hud.PartnerConnectionRequested += i => MarketAction(world.ConnectPartner(simulation, i));
             hud.ExpandNetworkRequested += () =>
             {
@@ -199,7 +200,7 @@ namespace NetworkCollapse
             world = IspWorld.Create();
             if (restore && PlayerPrefs.HasKey(WorldSaveKey))
             {
-                try { var loaded = JsonUtility.FromJson<IspWorld>(PlayerPrefs.GetString(WorldSaveKey)); if (loaded != null && loaded.Cities != null && loaded.Tariffs != null) world = loaded; }
+                try { var loaded = JsonUtility.FromJson<IspWorld>(PlayerPrefs.GetString(WorldSaveKey)); if (loaded != null && loaded.Cities != null && loaded.Cities.Count > 0 && loaded.Tariffs != null) world = loaded; }
                 catch (System.Exception ex) { Debug.LogWarning("World save rejected: " + ex.Message); }
             }
             firstRunTutorial = !PlayerPrefs.HasKey("NetworkCollapse.TutorialSeen");

@@ -349,6 +349,11 @@ namespace NetworkCollapse
             return button;
         }
 
+        public void SelectScreen(int screen)
+        {
+            ShowTab(screen == 1 ? "missions" : screen == 2 ? "inventory" : "operations");
+        }
+
         private void ShowTab(string tab)
         {
             activeTab = tab;

@@ -7,6 +7,10 @@ namespace NetworkCollapse
     public sealed partial class NetworkHud : MonoBehaviour
     {
         private NetworkSimulation model;
+        private HudMarketController marketController;
+        private HudMissionController missionController;
+        private HudInspectorController inspectorController;
+        private HudMapController mapController;
         private UIDocument document;
         private PanelSettings panelSettings;
         private ThemeStyleSheet runtimeTheme;
@@ -177,12 +181,13 @@ namespace NetworkCollapse
             nav.style.marginTop = 12;
             nav.style.marginBottom = 12;
             operationsTab = new VisualElement();
-            missionsTab = new VisualElement();
+            missionController = new HudMissionController(() => campaign);
+            missionsTab = missionController.Content;
             inventoryTab = new VisualElement();
             left.Add(operationsTab);
-            left.Add(missionsTab);
             left.Add(inventoryTab);
-            marketTab = new VisualElement(); left.Add(marketTab);
+            marketController = new HudMarketController(() => world, value => RenderMarket());
+            marketTab = marketController.Content;
             marketTab.style.flexShrink = 0;
             marketTab.Add(Heading("МИРОВОЙ РЫНОК ISP", 15));
             marketSummary = Body(""); marketTab.Add(marketSummary);
@@ -252,6 +257,8 @@ namespace NetworkCollapse
 
             var right = Panel(338);
             rightDock = right;
+            inspectorController = new HudInspectorController(() => model);
+            mapController = new HudMapController(() => model);
             root.Add(right);
             title = Heading("ОБОРУДОВАНИЕ", 19);
             right.Add(title);

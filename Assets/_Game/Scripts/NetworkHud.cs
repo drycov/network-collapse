@@ -372,7 +372,7 @@ namespace NetworkCollapse
                 }
                 dialogueLabel.text = campaign.StoryBriefing;
                 var incidents = new System.Collections.Generic.List<string>();
-                foreach (var node in model.Nodes) if (node.Failed) incidents.Add("[NODE] " + node.Hostname + " · " + node.Status);
+                foreach (var incidentNode in model.Nodes) if (incidentNode.Failed) incidents.Add("[NODE] " + incidentNode.Hostname + " · " + incidentNode.Status);
                 for (int i = 0; i < model.Links.Count; i++) if (model.Links[i].Failed) incidents.Add("[LINK] #" + i + " N" + model.Links[i].A + " ↔ N" + model.Links[i].B);
                 incidentLabel.text = incidents.Count == 0 ? "NO ACTIVE INCIDENTS" : string.Join("\n", incidents);
                 achievementLabel.text = campaign.AchievementText();

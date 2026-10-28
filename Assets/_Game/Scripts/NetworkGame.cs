@@ -76,6 +76,18 @@ namespace NetworkCollapse
                 audio.Play(SoundCue.Alert);
                 Refresh();
             };
+            hud.EngineeredBuildRequested += (a, b, medium, speed) =>
+            {
+                int cost = simulation.GetBuildCost(a, b, medium, speed);
+                if (simulation.BuildLink(a, b, medium, speed))
+                {
+                    hud.AddEvent($"Монтаж N{a:00}–N{b:00}: {medium}, {speed} Mbps, {cost} кр.");
+                    campaign.OnAction(MissionKind.BuildLink);
+                    audio.Play(SoundCue.LinkBuilt);
+                    hud.Select(a); map.SetSelected(a); SaveCampaign(); Refresh();
+                }
+                else { hud.AddEvent("Монтаж отклонён: " + simulation.BuildBlockReason(a, b, medium, speed)); audio.Play(SoundCue.Error); }
+            };
             hud.BuildLinkRequested += (a, b) =>
             {
                 if (!simulation.GameOver && simulation.BuildLink(a, b))

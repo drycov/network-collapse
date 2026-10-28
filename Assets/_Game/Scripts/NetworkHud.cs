@@ -46,6 +46,8 @@ namespace NetworkCollapse
         public event Action<int, int> RivalNegotiationRequested;
         private Label worldMapLabel, bgpTableLabel;
         private VisualElement geographicMap;
+        private VisualElement windowLayer, currentWindow;
+        private ScrollView windowContent;
         public event Action<int> PartnerConnectionRequested;
         private string activeTab = "operations";
         private int previewMission = -1;
@@ -81,7 +83,7 @@ namespace NetworkCollapse
 
         public bool IsPointerOverHud(Vector2 screen)
         {
-            if (menuOpen) return true;
+            if (menuOpen || (windowLayer != null && windowLayer.resolvedStyle.display != DisplayStyle.None)) return true;
             bool inspectorVisible = rightDock != null && rightDock.resolvedStyle.display != DisplayStyle.None;
             return screen.y > Screen.height - 52 || screen.x < (Screen.width < 1100 ? Mathf.Clamp(Screen.width * .24f, 195, 270) + 18 : 350) ||
                    (inspectorVisible && screen.x > Screen.width - (Screen.width < 1100 ? Mathf.Clamp(Screen.width * .24f, 195, 270) + 18 : 360));
@@ -366,6 +368,7 @@ namespace NetworkCollapse
             footerStatus.style.right = 360;
             footerStatus.style.unityTextAlign = TextAnchor.MiddleCenter;
             root.Add(footerStatus);
+            CreateWindowLayer(root);
             ShowTab(activeTab);
             OpenMenu(menuOpen);
             Refresh();
@@ -471,6 +474,7 @@ namespace NetworkCollapse
             menuOpen = open;
             if (mainMenu != null) mainMenu.style.display = open ? DisplayStyle.Flex : DisplayStyle.None;
             if (dialogueOverlay != null && open) dialogueOverlay.style.display = DisplayStyle.None;
+            if (windowLayer != null) windowLayer.style.display = open || activeTab == "operations" ? DisplayStyle.None : DisplayStyle.Flex;
             if (leftDock != null) leftDock.style.display = open ? DisplayStyle.None : DisplayStyle.Flex;
             if (rightDock != null) rightDock.style.display = open || (SelectedId < 0 && SelectedLinkId < 0 && !BuildMode) ? DisplayStyle.None : DisplayStyle.Flex;
         }
@@ -506,14 +510,70 @@ namespace NetworkCollapse
             ShowTab(screen == 1 ? "missions" : screen == 2 ? "inventory" : "operations");
         }
 
+        private void CreateWindowLayer(VisualElement root)
+        {
+            windowLayer = new VisualElement();
+            windowLayer.style.position = Position.Absolute;
+            windowLayer.style.left = 0; windowLayer.style.right = 0;
+            windowLayer.style.top = 0; windowLayer.style.bottom = 0;
+            windowLayer.style.justifyContent = Justify.Center;
+            windowLayer.style.alignItems = Align.Center;
+            windowLayer.style.backgroundColor = new Color(0f, .01f, .025f, .62f);
+            windowContent = new ScrollView(ScrollViewMode.Vertical);
+            windowContent.style.width = Length.Percent(100);
+            windowContent.style.flexGrow = 1;
+            windowContent.style.flexShrink = 1;
+            windowContent.style.paddingLeft = 16;
+            windowContent.style.paddingRight = 16;
+            windowContent.style.paddingBottom = 16;
+            var frame = new VisualElement();
+            currentWindow = frame;
+            frame.style.width = Length.Percent(72);
+            frame.style.maxWidth = 860;
+            frame.style.height = Length.Percent(82);
+            frame.style.backgroundColor = new Color(.015f, .06f, .085f, 1f);
+            frame.style.borderTopWidth = 2;
+            frame.style.borderTopColor = new Color(.24f, .78f, .71f);
+            var header = new VisualElement();
+            header.style.flexDirection = FlexDirection.Row;
+            header.style.justifyContent = Justify.SpaceBetween;
+            header.style.paddingLeft = 16;
+            header.style.paddingTop = 12;
+            header.style.paddingRight = 16;
+            header.style.height = 52;
+            var caption = Heading("ОКНО ОПЕРАЦИЙ", 17);
+            caption.name = "window-title";
+            header.Add(caption);
+            header.Add(ActionButton("ЗАКРЫТЬ  ×", () => ShowTab("operations")));
+            frame.Add(header);
+            frame.Add(windowContent);
+            windowLayer.Add(frame);
+            root.Add(windowLayer);
+            windowLayer.style.display = DisplayStyle.None;
+        }
+
         private void ShowTab(string tab)
         {
             activeTab = tab;
-            if (operationsTab != null) operationsTab.style.display = tab == "operations" ? DisplayStyle.Flex : DisplayStyle.None;
-            if (missionsTab != null) missionsTab.style.display = tab == "missions" ? DisplayStyle.Flex : DisplayStyle.None;
-            if (inventoryTab != null) inventoryTab.style.display = tab == "inventory" ? DisplayStyle.Flex : DisplayStyle.None;
-            if (settingsTab != null) settingsTab.style.display = tab == "settings" ? DisplayStyle.Flex : DisplayStyle.None;
-            if (marketTab != null) marketTab.style.display = tab == "market" ? DisplayStyle.Flex : DisplayStyle.None;
+            if (operationsTab != null) operationsTab.style.display = DisplayStyle.Flex;
+            if (windowLayer == null) return;
+            if (tab == "operations")
+            {
+                windowLayer.style.display = DisplayStyle.None;
+                return;
+            }
+            VisualElement content = tab == "missions" ? missionsTab :
+                tab == "inventory" ? inventoryTab :
+                tab == "market" ? marketTab : settingsTab;
+            if (content == null) return;
+            windowContent.Clear();
+            windowContent.Add(content);
+            content.style.display = DisplayStyle.Flex;
+            var caption = currentWindow.Q<Label>("window-title");
+            if (caption != null) caption.text = tab == "missions" ? "MISSION CONTROL" :
+                tab == "inventory" ? "ИНВЕНТАРЬ И РЕСУРСЫ" :
+                tab == "market" ? "СТРАТЕГИЧЕСКАЯ КАРТА / РЫНОК" : "НАСТРОЙКИ";
+            windowLayer.style.display = menuOpen ? DisplayStyle.None : DisplayStyle.Flex;
         }
 
         public void SetWorld(IspWorld value)

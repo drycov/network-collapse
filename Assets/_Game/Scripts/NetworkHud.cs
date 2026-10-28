@@ -94,7 +94,8 @@ namespace NetworkCollapse
             left.Add(Heading("УПРАВЛЕНИЕ", 15));
             modeButton = ActionButton("Режим строительства: выкл.", () => { BuildMode = !BuildMode; BuildModeChanged?.Invoke(BuildMode); Refresh(); });
             left.Add(modeButton);
-            left.Add(Heading("ФИЛЬТР УЗЛОВ", 14));
+            left.Add(Heading("СЛОИ ТОПОЛОГИИ", 14));
+            left.Add(Body("CORE / жёлтый   DIST / синий   ACCESS / зелёный\nPRIMARY / жёлтый   BACKUP / фиолетовый\nFAULT / красный   REPAIR / оранжевый"));
             left.Add(ActionButton("Все категории", () => FilterChanged?.Invoke(null)));
             left.Add(ActionButton("Core", () => FilterChanged?.Invoke(EquipmentTier.Core)));
             left.Add(ActionButton("Distribution", () => FilterChanged?.Invoke(EquipmentTier.Distribution)));

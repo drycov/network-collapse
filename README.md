@@ -174,3 +174,9 @@ Known limitations: imported networks currently have a simple hub/backhaul struct
 Each integrated competitor's physical devices now retain the original operator name and fictional ASN. The world save keeps a subsidiary registry (city, original ASN, number of sites and transferred subscribers, recurring maintenance obligation, inherited-fault estimate). The Market game window shows that portfolio, and the node inspector identifies acquired assets. Acquired-network maintenance continues to be charged by the physical network simulation. Escape closes secondary game windows before invoking the pause menu.
 
 The former rival's actual BGP RIB, historical monitoring events, and per-asset service contracts are not yet imported. Build validation in Unity Editor remains outstanding.
+
+## Acquisition integration v2
+
+Rival operators now have pre-acquisition site-to-site links (endpoints, capacity, and fault state), local ASN routes, inherited upstream transit agreements, and technician counts. Acquisition imports those original links into the physical network with new local IDs, keeps failed links failed, establishes one upstream interconnection, and records the inherited routes/contracts in a subsidiary. Subsidiary routing entries appear in the BGP-inspired RIB, with legacy AS paths; transit contracts charge ongoing fees in the world economy. The Market window lists each subsidiary's legacy transit, route and technician counts and can dispatch its own repair staff to faulty acquired equipment using normal repair prices/timers.
+
+This is still a simplified gameplay system: rival graph topology is generated independently but not run as a standalone full NetworkSimulation before purchase; routing prefixes are fictional; imported routing policy does not yet affect physical forwarding decisions. Old saves with missing rival links/routes/contracts may fall back to basic links. Unity Editor compilation/play tests have not been run.

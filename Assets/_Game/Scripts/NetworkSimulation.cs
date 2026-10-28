@@ -145,7 +145,7 @@ namespace NetworkCollapse
             ObjectiveProgress = Mathf.Max(0, s.ObjectiveProgress);
             ObjectiveComplete = s.ObjectiveComplete; GameOver = s.GameOver;
             EquipmentUpgrades = Mathf.Max(0, s.EquipmentUpgrades);
-            Customers = Mathf.Max(0, s.Customers); MarketReach = Mathf.Max(1, s.MarketReach);
+            Customers = Mathf.Max(0, s.Customers == 0 && s.MarketReach == 0 ? 12 : s.Customers); MarketReach = Mathf.Max(1, s.MarketReach);
             TargetAvailability = Mathf.Clamp(.80f + Level * .015f, .80f, .93f);
             ObjectiveTimer = 70f + Level * 10f;
             Interfaces.Clear(); Subnets.Clear(); RoutingTables.Clear(); NeighborTables.Clear(); SwitchingTables.Clear(); Vlans.Clear();
@@ -232,6 +232,7 @@ namespace NetworkCollapse
             int fee = 70 + MarketReach * 25;
             if (GameOver || Money < fee || Nodes.Count >= 90) return false;
             // New districts attach to an aggregation device; major expansion adds an aggregation node.
+            bool newBackbone = Nodes.Count >= 20 && Nodes.Count % 18 == 0;
             bool aggregation = Nodes.Count % 5 == 0;
             int parent = 1;
             var candidates = Nodes.FindAll(n => n.Tier == EquipmentTier.Distribution);
@@ -240,7 +241,13 @@ namespace NetworkCollapse
             float angle = (float)(random.NextDouble() * Mathf.PI * 2);
             float distance = 2.7f + (float)random.NextDouble() * 2.1f;
             var pos = anchor + new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * distance;
-            if (aggregation)
+            if (newBackbone)
+            {
+                int core = AddProceduralNode(EquipmentTier.Core, pos + new Vector2(3f, 2f));
+                AddLink(0, core, 550, false);
+                AddLink(parent, core, 250, false);
+            }
+            else if (aggregation)
             {
                 pos += new Vector2(random.Next(-2, 3), random.Next(-2, 3));
                 int agg = AddProceduralNode(EquipmentTier.Distribution, pos);

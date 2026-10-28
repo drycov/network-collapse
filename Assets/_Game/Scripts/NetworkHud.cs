@@ -11,7 +11,8 @@ namespace NetworkCollapse
         private PanelSettings panelSettings;
         private Label kpis, details, title, objectiveLabel;
         private Button repair, failure, build, upgrade, repairLink, nextLevel;
-        private Label connectionInfo;
+        private Label connectionInfo, eventLog;
+        private readonly System.Collections.Generic.List<string> events = new System.Collections.Generic.List<string>();
 
         public event Action<int, int> BuildLinkRequested;
         public event Action<int> UpgradeLinkRequested;
@@ -68,6 +69,9 @@ namespace NetworkCollapse
             left.Add(ActionButton("Обрыв волокна", () => IncidentRequested?.Invoke(IncidentScenario.FiberCut)));
             left.Add(ActionButton("Отказ питания", () => IncidentRequested?.Invoke(IncidentScenario.PowerFailure)));
             left.Add(ActionButton("Каскадный сбой", () => IncidentRequested?.Invoke(IncidentScenario.Cascade)));
+            left.Add(Heading("ЖУРНАЛ СОБЫТИЙ", 14));
+            eventLog = Body("");
+            left.Add(eventLog);
             left.Add(Body("ЛКМ — узел\nB + ЛКМ — второй узел\nПКМ/СКМ — панорама\nКолесо — масштаб · F — центр"));
 
             var right = Panel(300);
@@ -90,18 +94,18 @@ namespace NetworkCollapse
             right.Add(upgrade);
             right.Add(repairLink);
             Refresh();
+            if (eventLog != null) eventLog.text = string.Join("\n", events);
         }
 
         private static VisualElement Panel(float width)
         {
-            var panel = new VisualElement();
+            var panel = new ScrollView(ScrollViewMode.Vertical);
             panel.style.width = width;
             panel.style.paddingLeft = 16;
             panel.style.paddingRight = 16;
             panel.style.paddingTop = 17;
             panel.style.paddingBottom = 17;
             panel.style.maxHeight = Length.Percent(96);
-            panel.style.overflow = Overflow.Hidden;
             panel.style.backgroundColor = new Color(.045f, .073f, .12f, .94f);
             panel.style.borderTopLeftRadius = panel.style.borderTopRightRadius = 12;
             panel.style.borderBottomLeftRadius = panel.style.borderBottomRightRadius = 12;
@@ -138,6 +142,13 @@ namespace NetworkCollapse
             return button;
         }
 
+        public void AddEvent(string message)
+        {
+            events.Insert(0, $"[{DateTime.Now:HH:mm:ss}] {message}");
+            if (events.Count > 6) events.RemoveAt(events.Count - 1);
+            if (eventLog != null) eventLog.text = string.Join("\n", events);
+        }
+
         public void SelectTarget(int id)
         {
             TargetId = id;
@@ -172,7 +183,11 @@ namespace NetworkCollapse
                 $"Цель: ≥ {model.TargetAvailability:P0} доступности\n" +
                 $"Прогресс: {prog:P0} ({model.ObjectiveProgress:0}/{model.ObjectiveTimer:0} с)";
 
-            nextLevel.style.display = model.ObjectiveComplete ? DisplayStyle.Flex : DisplayStyle.None;
+            nextLevel.style.display = model.ObjectiveComplete && !model.GameOver ? DisplayStyle.Flex : DisplayStyle.None;
+            failure.SetEnabled(!model.GameOver);
+            build.SetEnabled(false);
+            upgrade.SetEnabled(false);
+            repairLink.SetEnabled(false);
 
             bool valid = SelectedId >= 0 && SelectedId < model.Nodes.Count;
             failure.style.display = valid && !model.Nodes[SelectedId].Failed ? DisplayStyle.Flex : DisplayStyle.None;
@@ -180,7 +195,7 @@ namespace NetworkCollapse
 
             bool canStartRepair = valid && model.Money >= NetworkSimulation.RepairCost &&
                                   model.Nodes[SelectedId].RepairRemaining <= 0f;
-            repair.SetEnabled(canStartRepair);
+            repair.SetEnabled(canStartRepair && !model.GameOver);
             if (valid && model.Nodes[SelectedId].Failed && model.Nodes[SelectedId].RepairRemaining > 0f)
                 repair.text = $"Ремонт… {model.Nodes[SelectedId].RepairRemaining:0.0}с";
             else
@@ -188,12 +203,12 @@ namespace NetworkCollapse
 
             int index = FindSelectedLink();
             bool pair = valid && TargetId >= 0 && TargetId != SelectedId;
-            build.SetEnabled(pair && index < 0 && model.Money >= NetworkSimulation.BuildCost);
-            upgrade.SetEnabled(pair && index >= 0 && !model.Links[index].Failed &&
+            build.SetEnabled(!model.GameOver && pair && index < 0 && model.Money >= NetworkSimulation.BuildCost);
+            upgrade.SetEnabled(!model.GameOver && pair && index >= 0 && !model.Links[index].Failed &&
                                model.Money >= NetworkSimulation.UpgradeCost && model.Links[index].Capacity < 240);
 
             bool linkRepairing = pair && index >= 0 && model.Links[index].Failed && model.Links[index].RepairRemaining > 0f;
-            repairLink.SetEnabled(pair && index >= 0 && model.Links[index].Failed &&
+            repairLink.SetEnabled(!model.GameOver && pair && index >= 0 && model.Links[index].Failed &&
                                   model.Money >= NetworkSimulation.LinkRepairCost && !linkRepairing);
             if (linkRepairing)
                 repairLink.text = $"Ремонт канала… {model.Links[index].RepairRemaining:0.0}с";

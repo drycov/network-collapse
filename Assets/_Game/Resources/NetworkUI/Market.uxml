@@ -1,0 +1,1 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements"><ui:VisualElement name="market-root"><ui:Label text="СТРАТЕГИЧЕСКИЙ РЫНОК" class="nc-title"/><ui:Label name="market-summary" class="nc-caption"/><ui:VisualElement name="market-tabs" class="nc-market__tabs"/><ui:VisualElement name="market-content"/></ui:VisualElement></ui:UXML>

@@ -184,3 +184,7 @@ This is still a simplified gameplay system: rival graph topology is generated in
 ## Market and settings window redesign
 
 The settings dialog now uses readable high-contrast audio/graphics sections, visible volume percentage, and explicit mute/performance buttons instead of low-contrast default Toolkit toggles. The market dialog is divided into four compact views (Cities, Contracts, M&A, Transit/BGP), removing the unbounded city × tariff button grid. The city overview is a bounded interactive map, and only covered cities show tariff-signup actions. Window content is hosted in a clipped, vertically scrollable pane; window headers and close buttons stay outside the scrolling area. Check appearance and input behavior in Unity Editor at 1280×720, 1600×900 and 1920×1080.
+
+## HUD stabilization pass
+
+Responsive HUD docks now update only the left/right panels (rather than every child scroll view); modal dialogs keep fixed headers and clipped scrollable content, while width scales across common desktop resolutions. Updated nav buttons wrap, actions have readable multiline text and consistent padding, the market summary is boxed, and pointer blocking uses actual dock geometry. The market BGP view refreshes only when shown, avoiding needless route-table rebuilding on unrelated screens. This was verified by source inspection, not an executable Unity build; check layout and console at 1280x720 / 1600x900 / 1920x1080.

@@ -184,19 +184,49 @@ namespace NetworkCollapse
             marketTab.style.flexShrink = 0;
             marketTab.Add(Heading("МИРОВОЙ РЫНОК ISP", 15));
             marketSummary = Body(""); marketTab.Add(marketSummary);
-            settingsTab = new VisualElement(); left.Add(settingsTab);
+            settingsTab = new VisualElement();
             settingsTab.style.flexShrink = 0;
-            settingsTab.Add(Heading("АУДИО", 15));
-            volumeSlider = new Slider("Громкость", 0, 1) { value = PlayerPrefs.GetFloat("NC.Volume", .48f) };
+            settingsTab.style.width = Length.Percent(100);
+            settingsTab.Add(Heading("ЗВУК И ПРОИЗВОДИТЕЛЬНОСТЬ", 17));
+            settingsTab.Add(Body("Изменения применяются сразу и сохраняются для следующих запусков."));
+            var soundCard = SettingsSection("АУДИО", "Общая громкость и звуковые эффекты");
+            settingsTab.Add(soundCard);
+            volumeSlider = new Slider(0f, 1f) { value = PlayerPrefs.GetFloat("NC.Volume", .48f) };
+            volumeSlider.style.width = Length.Percent(100);
+            volumeSlider.style.height = 25;
+            volumeSlider.style.marginBottom = 12;
             volumeSlider.RegisterValueChangedCallback(e => { PlayerPrefs.SetFloat("NC.Volume", e.newValue); VolumeChanged?.Invoke(e.newValue); });
-            settingsTab.Add(volumeSlider);
-            muteToggle = new Toggle("Отключить звук") { value = PlayerPrefs.GetInt("NC.Muted", 0) != 0 };
-            muteToggle.RegisterValueChangedCallback(e => { PlayerPrefs.SetInt("NC.Muted", e.newValue ? 1 : 0); MuteChanged?.Invoke(e.newValue); });
-            settingsTab.Add(muteToggle);
-            settingsTab.Add(Heading("ГРАФИКА", 15));
-            var performance = new Toggle("Экономичный режим") { value = PlayerPrefs.GetInt("NC.LowGraphics", 0) != 0 };
-            performance.RegisterValueChangedCallback(e => { PlayerPrefs.SetInt("NC.LowGraphics", e.newValue ? 1 : 0); PerformanceModeChanged?.Invoke(e.newValue); });
-            settingsTab.Add(performance);
+            soundCard.Add(Body("ОБЩАЯ ГРОМКОСТЬ"));
+            soundCard.Add(volumeSlider);
+            var volumeText = Body("");
+            volumeText.text = Mathf.RoundToInt(volumeSlider.value * 100) + "%";
+            soundCard.Add(volumeText);
+            volumeSlider.RegisterValueChangedCallback(e => volumeText.text = Mathf.RoundToInt(e.newValue * 100) + "%");
+            muteToggle = new Toggle { value = PlayerPrefs.GetInt("NC.Muted", 0) != 0 };
+            muteToggle.style.display = DisplayStyle.None;
+            soundCard.Add(muteToggle);
+            var muteButton = ActionButton("", () => { muteToggle.value = !muteToggle.value; });
+            muteButton.text = muteToggle.value ? "ВКЛЮЧИТЬ ЗВУК" : "ОТКЛЮЧИТЬ ЗВУК";
+            muteToggle.RegisterValueChangedCallback(e => {
+                PlayerPrefs.SetInt("NC.Muted", e.newValue ? 1 : 0);
+                MuteChanged?.Invoke(e.newValue);
+                muteButton.text = e.newValue ? "ВКЛЮЧИТЬ ЗВУК" : "ОТКЛЮЧИТЬ ЗВУК";
+            });
+            soundCard.Add(muteButton);
+            var graphicsCard = SettingsSection("ГРАФИКА", "Режим производительности и частота кадров");
+            settingsTab.Add(graphicsCard);
+            var performance = new Toggle { value = PlayerPrefs.GetInt("NC.LowGraphics", 0) != 0 };
+            performance.style.display = DisplayStyle.None;
+            graphicsCard.Add(performance);
+            var performanceButton = ActionButton("", () => performance.value = !performance.value);
+            performanceButton.text = performance.value ? "ЭКОНОМИЧНЫЙ РЕЖИМ: ВКЛ." : "ЭКОНОМИЧНЫЙ РЕЖИМ: ВЫКЛ.";
+            performance.RegisterValueChangedCallback(e => {
+                PlayerPrefs.SetInt("NC.LowGraphics", e.newValue ? 1 : 0);
+                PerformanceModeChanged?.Invoke(e.newValue);
+                performanceButton.text = e.newValue ? "ЭКОНОМИЧНЫЙ РЕЖИМ: ВКЛ." : "ЭКОНОМИЧНЫЙ РЕЖИМ: ВЫКЛ.";
+            });
+            graphicsCard.Add(performanceButton);
+            graphicsCard.Add(Body("Экономичный режим ограничивает частоту кадров до 30 FPS."));
             foreach (var tab in new[] { operationsTab, missionsTab, inventoryTab })
             {
                 tab.style.flexShrink = 0;
@@ -395,6 +425,22 @@ namespace NetworkCollapse
             if (footerStatus != null) footerStatus.text = paused ? "● СИМУЛЯЦИЯ ПРИОСТАНОВЛЕНА" : "● ОПЕРАТОР НА ЛИНИИ   |   ЛКМ: ВЫБОР   |   КОЛЕСО: МАСШТАБ   |   F: ЦЕНТР";
         }
 
+        private static VisualElement SettingsSection(string heading, string description)
+        {
+            var section = new VisualElement();
+            section.style.paddingTop = 17;
+            section.style.paddingBottom = 14;
+            section.style.paddingLeft = 16;
+            section.style.paddingRight = 16;
+            section.style.marginBottom = 14;
+            section.style.backgroundColor = new Color(.055f, .13f, .17f, 1f);
+            section.style.borderLeftWidth = 3;
+            section.style.borderLeftColor = new Color(.25f, .78f, .7f, 1f);
+            section.Add(Heading(heading, 15));
+            section.Add(Body(description));
+            return section;
+        }
+
         private static VisualElement Panel(float width)
         {
             var panel = new ScrollView(ScrollViewMode.Vertical);
@@ -526,6 +572,10 @@ namespace NetworkCollapse
             windowContent.style.width = Length.Percent(100);
             windowContent.style.flexGrow = 1;
             windowContent.style.flexShrink = 1;
+            windowContent.style.minHeight = 0;
+            windowContent.style.overflow = Overflow.Hidden;
+            windowContent.contentContainer.style.flexShrink = 0;
+            windowContent.contentContainer.style.width = Length.Percent(100);
             windowContent.style.paddingLeft = 16;
             windowContent.style.paddingRight = 16;
             windowContent.style.paddingBottom = 16;
@@ -534,6 +584,8 @@ namespace NetworkCollapse
             frame.style.width = Length.Percent(72);
             frame.style.maxWidth = 860;
             frame.style.height = Length.Percent(82);
+            frame.style.maxHeight = Length.Percent(88);
+            frame.style.overflow = Overflow.Hidden;
             frame.style.backgroundColor = new Color(.015f, .06f, .085f, 1f);
             frame.style.borderTopWidth = 2;
             frame.style.borderTopColor = new Color(.24f, .78f, .71f);
@@ -574,6 +626,8 @@ namespace NetworkCollapse
             windowContent.Clear();
             windowContent.Add(content);
             content.style.display = DisplayStyle.Flex;
+            content.style.flexShrink = 0;
+            content.style.width = Length.Percent(100);
             var caption = currentWindow.Q<Label>("window-title");
             if (caption != null) caption.text = tab == "missions" ? "MISSION CONTROL" :
                 tab == "inventory" ? "ИНВЕНТАРЬ И РЕСУРСЫ" :

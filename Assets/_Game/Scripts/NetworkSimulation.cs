@@ -283,11 +283,31 @@ namespace NetworkCollapse
         public int FindLink(int a, int b) =>
             Links.FindIndex(l => (l.A == a && l.B == b) || (l.A == b && l.B == a));
 
+        public const float ConstructionMaxDistance = 13f;
+        public int GetBuildCost(int a, int b)
+        {
+            if (a < 0 || b < 0 || a >= Nodes.Count || b >= Nodes.Count || a == b) return -1;
+            float length = Vector2.Distance(Nodes[a].Position, Nodes[b].Position);
+            return BuildCost + Mathf.CeilToInt(length * 3f);
+        }
+        public string BuildBlockReason(int a, int b)
+        {
+            if (GameOver) return "Игра завершена";
+            if (a < 0 || b < 0 || a >= Nodes.Count || b >= Nodes.Count) return "Выберите два узла";
+            if (a == b) return "Нельзя соединить узел с самим собой";
+            if (FindLink(a, b) >= 0) return "Канал уже существует";
+            if (Nodes[a].Failed || Nodes[b].Failed || !Nodes[a].AdminEnabled || !Nodes[b].AdminEnabled)
+                return "Конечное оборудование недоступно";
+            if (Vector2.Distance(Nodes[a].Position, Nodes[b].Position) > ConstructionMaxDistance)
+                return "Дистанция превышает лимит трассы";
+            if (Money < GetBuildCost(a, b)) return "Недостаточно средств";
+            return null;
+        }
         public bool BuildLink(int a, int b)
         {
-            if (a == b || a < 0 || b < 0 || a >= Nodes.Count || b >= Nodes.Count ||
-                FindLink(a, b) >= 0 || Money < BuildCost) return false;
-            Money -= BuildCost;
+            if (BuildBlockReason(a, b) != null) return false;
+            int cost = GetBuildCost(a, b);
+            Money -= cost;
             AddLink(a, b, 48 + Level * 2, true);
             Step();
             return true;

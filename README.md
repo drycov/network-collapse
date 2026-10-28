@@ -85,3 +85,11 @@ Addressing conventions in this gameplay prototype:
 - Switch VLAN and MTU settings are validated and stored, but VLAN forwarding and per-interface MTU enforcement are pending. Do not treat the current simulator as RFC-conformance-tested.
 
 Upcoming: typed physical interfaces, VLAN-tagged trunks and access ports, IPv4 subnet validation, L3 adjacency rules, routing tables, and scenario tests.
+
+## Network data plane and path resilience
+
+Added `NetworkDataPlane.cs` with network interface, VLAN, subnet, route, neighbor and MAC switching entities. Existing topology links now create two interface records and one simulated /31 subnet each. These are data models, **not** a packet-level RFC implementation. Neighbor and switching tables are currently empty placeholders; control-plane STP, LACP and OSPF are not implemented.
+
+Traffic allocation now attempts a bandwidth-eligible primary route and a disjoint alternate. When the second route can carry half the source demand, a simple 50/50 split is used. Every simulation tick reroutes from scratch, so failures can cause selection of another available path. This is **simplified multipath traffic allocation**, not standards-compliant ECMP hashing or OSPF convergence. The device inspector shows per-source primary and alternate allocated Mbps; primary is yellow and alternate purple on the map.
+
+Unity runtime notes: `NetworkCameraController.ResetView()` now tolerates early calls. The dynamic `PanelSettings` is assigned a `ThemeStyleSheet`; Unity 6000.6 may still require a serialized panel-settings/theme asset for reliable packaged-player rendering. Editor and Web compilation have not been run.

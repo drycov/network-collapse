@@ -38,7 +38,9 @@ namespace NetworkCollapse
             backupRouteLinks.Clear();
             if (simulation != null)
             {
-                var path = simulation.FindDisplayRoute(source);
+                List<int> path = null;
+                if (!simulation.PrimaryPaths.TryGetValue(source, out path))
+                    path = simulation.FindDisplayRoute(source);
                 if (path != null) foreach (int link in path) routeLinks.Add(link);
                 if (simulation.BackupPaths.TryGetValue(source, out var backup))
                     foreach (int link in backup) backupRouteLinks.Add(link);

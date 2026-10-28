@@ -124,6 +124,49 @@ namespace NetworkCollapse
             Money -= cost; Customers += count;
             return true;
         }
+        public bool IntegrateRivalTopology(RivalOperator rival, int purchasePrice)
+        {
+            if (rival == null || rival.NetworkSites == null || rival.NetworkSites.Count == 0 ||
+                Nodes.Count + rival.NetworkSites.Count > 90 || GameOver || Money < purchasePrice) return false;
+            int initial = Nodes.Count;
+            int upstream = Nodes.FindIndex(n => n.Tier == EquipmentTier.Distribution);
+            if (upstream < 0) upstream = 0;
+            for (int i = 0; i < rival.NetworkSites.Count; i++)
+            {
+                int id = AddProceduralNode(i == 0 ? EquipmentTier.Distribution : EquipmentTier.Access,
+                    rival.NetworkSites[i] * .22f + new Vector2(-3f, -2f));
+                Nodes[id].OriginOperator = rival.Name;
+                Nodes[id].OriginAsn = rival.Asn;
+                Nodes[id].Hostname = "ma-" + id.ToString("00");
+                Nodes[id].Failed = i > 0 && i % 3 == 2;
+            }
+            // A single interconnection, plus the actual pre-acquisition intra-operator links.
+            AddLink(upstream, initial, 220f, false);
+            if (rival.NetworkLinks != null)
+                foreach (var legacy in rival.NetworkLinks)
+                {
+                    if (legacy.A < 0 || legacy.B < 0 || legacy.A >= rival.NetworkSites.Count ||
+                        legacy.B >= rival.NetworkSites.Count || legacy.A == legacy.B ||
+                        FindLink(initial + legacy.A, initial + legacy.B) >= 0) continue;
+                    AddLink(initial + legacy.A, initial + legacy.B, Mathf.Max(1f, legacy.Capacity), false);
+                    Links[Links.Count - 1].Failed = legacy.Failed;
+                }
+            // Older saves may have no graph edges: keep each inherited site reachable.
+            for (int i = 1; i < rival.NetworkSites.Count; i++)
+            {
+                int id = initial + i;
+                if (!Links.Exists(l => l.A == id || l.B == id)) AddLink(initial, id, 80f, false);
+            }
+            Money -= purchasePrice;
+            Customers += Mathf.Max(0, rival.Customers);
+            Nodes[initial].Demand += rival.Customers * .12f;
+            MarketReach += rival.NetworkSites.Count;
+            AcquiredSites += rival.NetworkSites.Count;
+            AcquiredMaintenance += Mathf.Max(1, rival.NetworkSites.Count / 2);
+            Step();
+            return true;
+        }
+
         public bool IntegrateRivalSites(System.Collections.Generic.List<Vector2> sites, int customers, int purchasePrice, string operatorName = null, int originAsn = 0)
         {
             if (sites == null || sites.Count == 0 || sites.Count + Nodes.Count > 90 ||

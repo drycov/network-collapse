@@ -126,6 +126,7 @@ namespace NetworkCollapse
                 renderer.transform.localScale = Vector3.one * .53f;
                 renderer.sortingOrder = 3;
 
+                AddEquipmentGlyph(root, node.Role);
                 nodeViews.Add(new NodeView { Root = root, Sprite = renderer, Halo = halo, RepairRing = repair });
             }
 
@@ -259,6 +260,45 @@ namespace NetworkCollapse
                 linkViews[i].SetPosition(0, simulation.Nodes[link.A].Position);
                 linkViews[i].SetPosition(1, simulation.Nodes[link.B].Position);
             }
+        }
+
+        // Original procedural network glyphs: routing arrows and switching port symbols.
+        // Rendered in local space so tier scaling and selection work automatically.
+        private void AddEquipmentGlyph(Transform root, DeviceRole role)
+        {
+            Color ink = new Color(.025f, .08f, .11f);
+            if (role == DeviceRole.Router)
+            {
+                GlyphStroke(root, new Vector2(-.16f, 0), new Vector2(.16f, 0), ink);
+                GlyphStroke(root, new Vector2(.09f, .085f), new Vector2(.17f, 0), ink);
+                GlyphStroke(root, new Vector2(.09f, -.085f), new Vector2(.17f, 0), ink);
+                GlyphStroke(root, new Vector2(0, -.15f), new Vector2(0, .15f), ink);
+                GlyphStroke(root, new Vector2(-.07f, .08f), new Vector2(0, .16f), ink);
+            }
+            else
+            {
+                GlyphStroke(root, new Vector2(-.17f, .09f), new Vector2(.17f, .09f), ink);
+                GlyphStroke(root, new Vector2(-.17f, -.09f), new Vector2(.17f, -.09f), ink);
+                for (int i = -1; i <= 1; i++)
+                    GlyphStroke(root, new Vector2(i * .12f, -.15f), new Vector2(i * .12f, .15f), ink);
+                if (role == DeviceRole.Layer3Switch)
+                    GlyphStroke(root, new Vector2(-.18f, -.18f), new Vector2(.18f, .18f), ink);
+            }
+        }
+
+        private void GlyphStroke(Transform root, Vector2 a, Vector2 b, Color color)
+        {
+            var obj = new GameObject("Network Symbol Stroke");
+            obj.transform.SetParent(root, false);
+            var line = obj.AddComponent<LineRenderer>();
+            line.useWorldSpace = false;
+            line.positionCount = 2;
+            line.SetPosition(0, new Vector3(a.x, a.y, -.1f));
+            line.SetPosition(1, new Vector3(b.x, b.y, -.1f));
+            line.material = lineMaterial;
+            line.sortingOrder = 5;
+            line.startWidth = line.endWidth = .032f;
+            line.startColor = line.endColor = color;
         }
 
         private void BuildTerminalGrid()

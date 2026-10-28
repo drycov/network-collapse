@@ -37,6 +37,12 @@ namespace NetworkCollapse
         public bool Peering;
         public bool Active;
     }
+    [Serializable] public sealed class AcquiredCompany
+    {
+        public string Name, City;
+        public int OriginalAsn, SiteCount, CustomerCount, MaintenancePerTick;
+        public int LegacyFaults;
+    }
     [Serializable] public sealed class IspWorld
     {
         public List<IspCity> Cities = new List<IspCity>();
@@ -44,6 +50,7 @@ namespace NetworkCollapse
         public List<IspContract> Contracts = new List<IspContract>();
         public List<RivalOperator> Rivals = new List<RivalOperator>();
         public List<TransitPartner> Partners = new List<TransitPartner>();
+        public List<AcquiredCompany> Subsidiaries = new List<AcquiredCompany>();
         public int Reputation = 10;
         public int Revenue, TransitCosts;
         public int OwnAsn = 64512; // Private ASN: fictional routing domain
@@ -191,9 +198,16 @@ namespace NetworkCollapse
             int offer = Mathf.CeilToInt((rival.Customers * 2 + rival.Assets * 20) * rival.OfferMultiplier);
             if (Reputation < rival.Reputation / 2) return "Недостаточная репутация для сделки";
             if (network.Money < offer) return "Для поглощения потребуется " + offer + " кр.";
-            if (!network.IntegrateRivalSites(rival.NetworkSites, rival.Customers, offer)) return "Невозможно интегрировать приобретённую сеть: бюджет или лимит узлов";
+            if (!network.IntegrateRivalSites(rival.NetworkSites, rival.Customers, offer, rival.Name, rival.Asn)) return "Невозможно интегрировать приобретённую сеть: бюджет или лимит узлов";
             rival.Acquired = true;
             CapturedNetworks++;
+            if (Subsidiaries == null) Subsidiaries = new List<AcquiredCompany>();
+            Subsidiaries.Add(new AcquiredCompany {
+                Name = rival.Name, City = rival.City, OriginalAsn = rival.Asn,
+                SiteCount = rival.NetworkSites.Count, CustomerCount = rival.Customers,
+                MaintenancePerTick = Mathf.Max(1, rival.NetworkSites.Count / 2),
+                LegacyFaults = rival.NetworkSites.Count / 3 + (rival.NetworkSites.Count > 1 ? 1 : 0)
+            });
             var city = Cities.Find(x => x.Name == rival.City);
             if (city != null) { city.Coverage = Mathf.Max(1, city.Coverage); city.Customers += rival.Customers; }
             Contracts.Add(new IspContract { City = rival.City, Tariff = "Домашний", Subscribers = rival.Customers });
@@ -265,7 +279,8 @@ namespace NetworkCollapse
         {
             int active = 0;
             foreach (var partner in Partners) if (partner.Active) active++;
-            return "ГОРОДА " + Cities.FindAll(c => c.Coverage > 0).Count + "/" + Cities.Count +
+            return "ДОЧЕРНИЕ ОПЕРАТОРЫ " + (Subsidiaries == null ? 0 : Subsidiaries.Count) + "\n" +
+                "ГОРОДА " + Cities.FindAll(c => c.Coverage > 0).Count + "/" + Cities.Count +
                 " · ASN " + OwnAsn + "\nКОНТРАКТЫ " + Contracts.Count + " · ПОГЛОЩЕНИЯ " + CapturedNetworks +
                 "\nПИРИНГ/ТРАНЗИТ " + active + " · МЕЖДУНАРОДНЫЕ " + ForeignLinks +
                 "\nВЫРУЧКА " + Revenue + " · ТРАНЗИТ " + TransitCosts + " кр./тик";

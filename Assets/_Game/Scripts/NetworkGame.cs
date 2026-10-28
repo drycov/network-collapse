@@ -65,6 +65,27 @@ namespace NetworkCollapse
             map = new GameObject("Network Map").AddComponent<NetworkMapView>();
             hud = new GameObject("Network HUD").AddComponent<NetworkHud>();
             hud.DeviceAction += OnDeviceAction;
+            hud.ExpandNetworkRequested += () =>
+            {
+                if (simulation.ExpandNetwork())
+                {
+                    map.Initialize(simulation);
+                    hud.Select(-1);
+                    hud.AddEvent("Новый район подключён. Узлов: " + simulation.Nodes.Count);
+                    SaveCampaign(); Refresh();
+                }
+                else hud.AddEvent("Не удалось расширить сеть: проверьте бюджет или предел узлов.");
+            };
+            hud.AcquireCustomersRequested += () =>
+            {
+                if (simulation.AcquireCustomers())
+                {
+                    hud.AddEvent("Новая рекламная кампания: клиентов " + simulation.Customers);
+                    SaveCampaign(); Refresh();
+                }
+                else hud.AddEvent("Кампания отклонена: недостаточно средств или мощности Access.");
+            };
+            hud.DiagnoseRequested += id => { hud.AddEvent("NOC / " + simulation.Diagnose(id)); audio.Play(SoundCue.Select); };
             hud.RandomFailureRequested += RandomFailure;
             hud.ResetRequested += ResetGame;
             hud.IncidentRequested += type =>

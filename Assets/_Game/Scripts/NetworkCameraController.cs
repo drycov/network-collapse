@@ -12,6 +12,7 @@ namespace NetworkCollapse
         private void Awake()
         {
             cam = GetComponent<Camera>();
+            if (cam == null) cam = gameObject.AddComponent<Camera>();
             cam.orthographic = true;
             cam.orthographicSize = 9f;
             cam.transform.position = new Vector3(0, 0, -20);
@@ -47,12 +48,15 @@ namespace NetworkCollapse
 
         public Vector3 ScreenWorld(Vector3 screen)
         {
+            if (cam == null) Awake();
             var world = cam.ScreenToWorldPoint(new Vector3(screen.x, screen.y, -cam.transform.position.z));
             return new Vector3(world.x, world.y, 0);
         }
 
         public void ResetView()
         {
+            if (cam == null) cam = GetComponent<Camera>();
+            if (cam == null) return;
             transform.position = new Vector3(0, 0, -20);
             cam.orthographicSize = 9f;
         }

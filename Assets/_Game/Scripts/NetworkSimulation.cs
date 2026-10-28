@@ -86,6 +86,9 @@ namespace NetworkCollapse
 
         public int TickCount { get; private set; }
         public int Money { get; private set; } = 180;
+        public int Customers { get; private set; } = 12;
+        public int MarketReach { get; private set; } = 1;
+        public string OperatorScale => Customers >= 2000 ? "Транснациональный" : Customers >= 500 ? "Национальный" : Customers >= 120 ? "Региональный" : "Локальный ISP";
         public int EquipmentUpgrades { get; private set; }
         public bool UpgradeDevice(int id)
         {
@@ -114,7 +117,7 @@ namespace NetworkCollapse
 
         [Serializable] public sealed class Snapshot
         {
-            public int Level, Money, Score, TickCount, EquipmentUpgrades;
+            public int Level, Money, Score, TickCount, EquipmentUpgrades, Customers, MarketReach;
             public float ObjectiveProgress;
             public bool ObjectiveComplete, GameOver;
             public List<NetworkNode> Nodes = new List<NetworkNode>();
@@ -125,7 +128,7 @@ namespace NetworkCollapse
             var s = new Snapshot { Level = Level, Money = Money, Score = Score,
                 TickCount = TickCount, ObjectiveProgress = ObjectiveProgress,
                 ObjectiveComplete = ObjectiveComplete, GameOver = GameOver,
-                EquipmentUpgrades = EquipmentUpgrades };
+                EquipmentUpgrades = EquipmentUpgrades, Customers = Customers, MarketReach = MarketReach };
             foreach (var node in Nodes) s.Nodes.Add(UnityEngine.JsonUtility.FromJson<NetworkNode>(UnityEngine.JsonUtility.ToJson(node)));
             foreach (var link in Links) s.Links.Add(UnityEngine.JsonUtility.FromJson<NetworkLink>(UnityEngine.JsonUtility.ToJson(link)));
             return s;
@@ -142,6 +145,7 @@ namespace NetworkCollapse
             ObjectiveProgress = Mathf.Max(0, s.ObjectiveProgress);
             ObjectiveComplete = s.ObjectiveComplete; GameOver = s.GameOver;
             EquipmentUpgrades = Mathf.Max(0, s.EquipmentUpgrades);
+            Customers = Mathf.Max(0, s.Customers); MarketReach = Mathf.Max(1, s.MarketReach);
             TargetAvailability = Mathf.Clamp(.80f + Level * .015f, .80f, .93f);
             ObjectiveTimer = 70f + Level * 10f;
             Interfaces.Clear(); Subnets.Clear(); RoutingTables.Clear(); NeighborTables.Clear(); SwitchingTables.Clear(); Vlans.Clear();
@@ -191,64 +195,94 @@ namespace NetworkCollapse
         // Addressing uses RFC1918 for management and RFC3021 /31 on simulated routed P2P links.
         private void BuildTopology()
         {
-            Nodes.Clear();
-            Links.Clear();
-            Interfaces.Clear(); Vlans.Clear(); Subnets.Clear(); RoutingTables.Clear();
-            NeighborTables.Clear(); SwitchingTables.Clear();
+            Nodes.Clear(); Links.Clear(); Interfaces.Clear(); Vlans.Clear(); Subnets.Clear();
+            RoutingTables.Clear(); NeighborTables.Clear(); SwitchingTables.Clear();
             PrimaryPaths.Clear(); BackupPaths.Clear(); PrimaryTraffic.Clear(); BackupTraffic.Clear();
-            int count = 16 + Mathf.Min(Level, 6);
-            for (int i = 0; i < count; i++)
+            // Small ISP: a gateway, distribution switch and three access sectors.
+            AddProceduralNode(EquipmentTier.Core, new Vector2(-2f, 3f));
+            AddProceduralNode(EquipmentTier.Distribution, new Vector2(0f, .5f));
+            AddLink(0, 1, 150f, false);
+            for (int i = 0; i < 3; i++)
             {
-                EquipmentTier tier = i < 2 ? EquipmentTier.Core :
-                    i < 7 ? EquipmentTier.Distribution : EquipmentTier.Access;
-                float x, y;
-                if (i == 0) { x = -3.2f; y = 4.6f; }
-                else if (i == 1) { x = 3.5f; y = 4.1f; }
-                else if (i < 7)
-                {
-                    x = -6.2f + (i - 2) * 3.1f + RandomRange(-.55f, .55f);
-                    y = 1.0f + RandomRange(-.9f, .6f);
-                }
-                else
-                {
-                    int group = (i - 7) % 5;
-                    int row = (i - 7) / 5;
-                    x = -6.5f + group * 3.15f + RandomRange(-.9f, .8f);
-                    y = -2.0f - row * 2.0f + RandomRange(-.85f, .65f);
-                }
-                var role = tier == EquipmentTier.Core ? DeviceRole.Router :
-                    tier == EquipmentTier.Distribution ? DeviceRole.Layer3Switch : DeviceRole.Layer2Switch;
-                Nodes.Add(new NetworkNode
-                {
-                    Id = i, Tier = tier, Role = role,
-                    Hostname = (tier == EquipmentTier.Core ? "cr" : tier == EquipmentTier.Distribution ? "ds" : "as") + "-" + i.ToString("00"),
-                    ManagementIp = "10.200." + (i / 254) + "." + (i % 254 + 1),
-                    VlanId = tier == EquipmentTier.Access ? 100 + ((i - 7) % 5) * 10 : 1,
-                    Routing = role == DeviceRole.Layer2Switch ? RoutingMode.Static : RoutingMode.OspfSimulated,
-                    Position = new Vector2(x, y),
-                    Demand = tier == EquipmentTier.Core ? 0 : 4 + random.Next(8 + Level * 2),
-                    Capacity = tier == EquipmentTier.Core ? 350 : tier == EquipmentTier.Distribution ? 140 : 45
-                });
+                int n = AddProceduralNode(EquipmentTier.Access,
+                    new Vector2((i - 1) * 3.3f + RandomRange(-.45f, .45f), -3f + RandomRange(-.55f, .55f)));
+                AddLink(1, n, 55f, false);
             }
-            AddLink(0, 1, 180, false);
-            for (int i = 2; i < Nodes.Count; i++)
+        }
+
+        private int AddProceduralNode(EquipmentTier tier, Vector2 pos)
+        {
+            int id = Nodes.Count;
+            DeviceRole role = tier == EquipmentTier.Core ? DeviceRole.Router :
+                tier == EquipmentTier.Distribution ? DeviceRole.Layer3Switch : DeviceRole.Layer2Switch;
+            Nodes.Add(new NetworkNode {
+                Id = id, Position = pos, Tier = tier, Role = role,
+                Hostname = (tier == EquipmentTier.Core ? "cr" : tier == EquipmentTier.Distribution ? "ds" : "as") + "-" + id.ToString("00"),
+                ManagementIp = "10.200." + (id / 254) + "." + (id % 254 + 1),
+                VlanId = tier == EquipmentTier.Access ? 100 + id % 30 : 1,
+                Routing = role == DeviceRole.Layer2Switch ? RoutingMode.Static : RoutingMode.OspfSimulated,
+                Capacity = tier == EquipmentTier.Core ? 1200 : tier == EquipmentTier.Distribution ? 400 : 120,
+                Demand = tier == EquipmentTier.Access ? 3f : 0f
+            });
+            return id;
+        }
+
+        public bool ExpandNetwork()
+        {
+            int fee = 70 + MarketReach * 25;
+            if (GameOver || Money < fee || Nodes.Count >= 90) return false;
+            // New districts attach to an aggregation device; major expansion adds an aggregation node.
+            bool aggregation = Nodes.Count % 5 == 0;
+            int parent = 1;
+            var candidates = Nodes.FindAll(n => n.Tier == EquipmentTier.Distribution);
+            if (candidates.Count > 0) parent = candidates[random.Next(candidates.Count)].Id;
+            Vector2 anchor = Nodes[parent].Position;
+            float angle = (float)(random.NextDouble() * Mathf.PI * 2);
+            float distance = 2.7f + (float)random.NextDouble() * 2.1f;
+            var pos = anchor + new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * distance;
+            if (aggregation)
             {
-                if (i < 7)
-                {
-                    AddLink(i, (i % 2), 100, false);
-                    if (i % 2 == 0) AddLink(i, 1, 70, false);
-                }
-                else
-                {
-                    int parent = 2 + (i - 7) % 5;
-                    AddLink(i, parent, 45, false);
-                    if ((i - 7) % 4 == 0)
-                        AddLink(i, 2 + ((parent - 1) % 5), 35, false);
-                }
+                pos += new Vector2(random.Next(-2, 3), random.Next(-2, 3));
+                int agg = AddProceduralNode(EquipmentTier.Distribution, pos);
+                AddLink(parent, agg, 180, false);
             }
-            // A few unequal cross-connects create loops and diverse restoration routes.
-            for (int i = 2; i < 6; i++)
-                if (random.NextDouble() < .72) AddLink(i, i + 1, 60, false);
+            else
+            {
+                int access = AddProceduralNode(EquipmentTier.Access, pos);
+                AddLink(parent, access, 70, false);
+            }
+            Money -= fee; MarketReach++;
+            Step();
+            return true;
+        }
+
+        public bool AcquireCustomers()
+        {
+            if (GameOver || Money < 20) return false;
+            var access = Nodes.FindAll(n => n.Tier == EquipmentTier.Access && !n.Failed && n.AdminEnabled);
+            if (access.Count == 0) return false;
+            var node = access[random.Next(access.Count)];
+            int newCustomers = Mathf.Max(3, MarketReach * 2);
+            if (node.Demand + newCustomers * .15f > node.Capacity) return false;
+            Money -= 20;
+            Customers += newCustomers;
+            node.Demand += newCustomers * .15f;
+            Step();
+            return true;
+        }
+
+        public string Diagnose(int nodeId)
+        {
+            if (nodeId < 0 || nodeId >= Nodes.Count) return "Выберите устройство для диагностики";
+            var node = Nodes[nodeId];
+            if (node.Failed) return node.RepairRemaining > 0f ? "Ремонт выполняется" : "Неисправность: питание/оборудование. Запустите ремонт.";
+            if (!node.AdminEnabled) return "Порт управления административно отключён";
+            var failedLink = Links.FindIndex(l => (l.A == nodeId || l.B == nodeId) && l.Failed);
+            if (failedLink >= 0) return "Обрыв или отказ канала #" + failedLink + ". Выберите линию и запустите ремонт.";
+            if (!PrimaryPaths.ContainsKey(nodeId) && nodeId != 0 && node.Demand > 0)
+                return "Нет рабочего маршрута к Core; проверьте смежные устройства и ёмкость каналов.";
+            if (node.Status == NodeStatus.Overloaded) return "Перегрузка узла, требуется модернизация.";
+            return "Диагностика завершена: критических неисправностей нет.";
         }
 
         private float RandomRange(float low, float high) => low + (float)random.NextDouble() * (high - low);
@@ -455,7 +489,7 @@ namespace NetworkCollapse
             int upkeep = 1 + FailedNodes + FailedLinks / 2;
             // Early levels offer recovery time before costs and incidents escalate.
             if (Level == 1 && TickCount < 15) upkeep = Mathf.Min(upkeep, 1);
-            Money = Mathf.Max(0, Money + income - upkeep);
+            Money = Mathf.Max(0, Money + income + Mathf.FloorToInt(Customers * Availability / 14f) - upkeep);
             Score += Mathf.RoundToInt(delivered * 0.35f + Availability * 6f);
 
             // Objective

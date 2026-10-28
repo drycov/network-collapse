@@ -107,6 +107,7 @@ namespace NetworkCollapse
 
             var root = document.rootVisualElement;
             root.Clear();
+            HudViewAssets.AttachStyle(root);
             root.style.flexDirection = FlexDirection.Row;
             root.style.justifyContent = Justify.SpaceBetween;
             root.style.height = Length.Percent(100);

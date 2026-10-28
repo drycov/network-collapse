@@ -100,6 +100,25 @@ namespace NetworkCollapse
             return true;
         }
         public void GrantCredits(int amount) { if (amount > 0) Money += amount; }
+        public bool SpendCredits(int amount) { if (amount < 0 || Money < amount) return false; Money -= amount; return true; }
+        public void CreditNet(int amount) { Money = Mathf.Max(0, Money + amount); }
+        public bool AddContractCustomers(int count, int cost)
+        {
+            if (count <= 0 || Money < cost || GameOver) return false;
+            var active = Nodes.FindAll(n => n.Tier == EquipmentTier.Access && !n.Failed && n.AdminEnabled && n.Demand + count * .15f <= n.Capacity);
+            if (active.Count == 0) return false;
+            Money -= cost; Customers += count;
+            active[random.Next(active.Count)].Demand += count * .15f;
+            return true;
+        }
+        public bool ExpandNetworkFree()
+        {
+            int fee = 70 + MarketReach * 25;
+            GrantCredits(fee);
+            bool success = ExpandNetwork();
+            if (!success) SpendCredits(fee);
+            return success;
+        }
         public float Availability { get; private set; } = 1f;
         public float DroppedTraffic { get; private set; }
         public int FailedNodes => Nodes.FindAll(n => n.Failed).Count;

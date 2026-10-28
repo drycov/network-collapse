@@ -102,6 +102,7 @@ namespace NetworkCollapse
         public void GrantCredits(int amount) { if (amount > 0) Money += amount; }
         public bool SpendCredits(int amount) { if (amount < 0 || Money < amount) return false; Money -= amount; return true; }
         public void CreditNet(int amount) { Money = Mathf.Max(0, Money + amount); }
+        public void LoseCustomers(int count) { Customers = Mathf.Max(0, Customers - Mathf.Max(0, count)); }
         public bool AddContractCustomers(int count, int cost)
         {
             if (count <= 0 || Money < cost || GameOver) return false;

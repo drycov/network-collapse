@@ -77,8 +77,7 @@ namespace NetworkCollapse
                 ? (Vector3)simulation.Nodes[target].Position : new Vector3(world.x, world.y, 0);
             previewLine.SetPosition(0, simulation.Nodes[source].Position);
             previewLine.SetPosition(1, end);
-            bool allowed = target < 0 || (target != source && simulation.FindLink(source, target) < 0 &&
-                simulation.Money >= NetworkSimulation.BuildCost && !simulation.GameOver);
+            bool allowed = target < 0 ? !simulation.GameOver : simulation.BuildBlockReason(source, target) == null;
             Color color = allowed ? new Color(.3f, 1f, .67f, .85f) : new Color(1f, .32f, .27f, .85f);
             previewLine.startColor = previewLine.endColor = color;
         }

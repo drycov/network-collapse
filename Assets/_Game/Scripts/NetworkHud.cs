@@ -47,6 +47,7 @@ namespace NetworkCollapse
         private Label worldMapLabel, bgpTableLabel;
         private VisualElement geographicMap;
         private VisualElement windowLayer, currentWindow;
+        public bool HasWindowOpen => windowLayer != null && windowLayer.style.display == DisplayStyle.Flex;
         private ScrollView windowContent;
         public event Action<int> PartnerConnectionRequested;
         private string activeTab = "operations";
@@ -479,6 +480,7 @@ namespace NetworkCollapse
             if (rightDock != null) rightDock.style.display = open || (SelectedId < 0 && SelectedLinkId < 0 && !BuildMode) ? DisplayStyle.None : DisplayStyle.Flex;
         }
         public void ToggleMenu() => OpenMenu(!menuOpen);
+        public void CloseGameWindow() => ShowTab("operations");
         public void ShowInspector(bool show)
         {
             if (rightDock != null && !menuOpen) rightDock.style.display = show ? DisplayStyle.Flex : DisplayStyle.None;
@@ -654,6 +656,12 @@ namespace NetworkCollapse
                 marketTab.Add(ActionButton(world.Partners[i].Name + " / AS" + world.Partners[i].Asn,
                     () => PartnerConnectionRequested?.Invoke(index)));
             }
+            marketTab.Add(Heading("ДОЧЕРНИЕ ОПЕРАТОРЫ", 14));
+            if (world.Subsidiaries != null)
+                foreach (var company in world.Subsidiaries)
+                    marketTab.Add(Body(company.Name + " · AS" + company.OriginalAsn +
+                        "\nПлощадок: " + company.SiteCount + " · Клиентов: " + company.CustomerCount +
+                        "\nСодержание: " + company.MaintenancePerTick + " кр./тик"));
             marketTab.Add(Heading("BGP / RIB", 14));
             bgpTableLabel = Body(""); marketTab.Add(bgpTableLabel);
             Refresh();
@@ -883,6 +891,7 @@ namespace NetworkCollapse
 
             details.text =
                 $"Tier: {node.Tier} | IP: {node.ManagementIp}\n" +
+                (string.IsNullOrEmpty(node.OriginOperator) ? "" : $"Приобретён у: {node.OriginOperator} / AS{node.OriginAsn}\n") +
                 $"VLAN: {node.VlanId} | MTU: {node.Mtu} | Routing: {node.Routing}\n" +
                 $"Состояние: {node.Status}{repairInfo}\n" +
                 $"Нагрузка: {node.Load:0.0} / {node.Capacity:0.0}\n" +

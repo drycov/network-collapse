@@ -270,6 +270,10 @@ namespace NetworkCollapse
             }
         }
 
+        private void OnApplicationPause(bool paused) { if (paused) SaveCampaign(); }
+
+        private void OnApplicationQuit() { SaveCampaign(); }
+
         private void OnDestroy()
         {
             SaveCampaign();

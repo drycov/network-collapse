@@ -80,7 +80,7 @@ namespace NetworkCollapse
         private readonly System.Random random;
 
         public int TickCount { get; private set; }
-        public int Money { get; private set; } = 150;
+        public int Money { get; private set; } = 180;
         public int EquipmentUpgrades { get; private set; }
         public bool UpgradeDevice(int id)
         {
@@ -408,6 +408,8 @@ namespace NetworkCollapse
 
             int income = Mathf.RoundToInt(delivered / 55f);
             int upkeep = 1 + FailedNodes + FailedLinks / 2;
+            // Early levels offer recovery time before costs and incidents escalate.
+            if (Level == 1 && TickCount < 15) upkeep = Mathf.Min(upkeep, 1);
             Money = Mathf.Max(0, Money + income - upkeep);
             Score += Mathf.RoundToInt(delivered * 0.35f + Availability * 6f);
 
@@ -428,7 +430,7 @@ namespace NetworkCollapse
                 }
             }
 
-            if (Nodes[0].Failed || (Availability < 0.22f && TickCount > 12))
+            if (Nodes[0].Failed || (Availability < (Level <= 2 ? .15f : .22f) && TickCount > (Level <= 2 ? 20 : 12)))
                 GameOver = true;
         }
 

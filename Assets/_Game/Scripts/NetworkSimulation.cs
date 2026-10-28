@@ -36,6 +36,8 @@ namespace NetworkCollapse
         public int TickCount { get; private set; }
         public int Money { get; private set; } = 100;
         public float Availability { get; private set; } = 1f;
+        public float DroppedTraffic { get; private set; }
+        public int FailedNodes => Nodes.FindAll(n => n.Failed).Count;
 
         public NetworkSimulation(int seed = 2026)
         {
@@ -76,6 +78,7 @@ namespace NetworkCollapse
                 delivered += traffic;
             }
             Availability = requested <= 0 ? 1 : delivered / requested;
+            DroppedTraffic = Mathf.Max(0f, requested - delivered);
             Money += Mathf.RoundToInt(delivered / 50f);
         }
 

@@ -79,7 +79,7 @@ namespace NetworkCollapse
             while (elapsed >= 2f)
             {
                 elapsed -= 2f;
-                simulation.Step();
+                simulation.Step(2f);
                 Refresh();
             }
             bool overPanel = hud.IsPointerOverHud(Input.mousePosition);

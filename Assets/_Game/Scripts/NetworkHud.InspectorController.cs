@@ -29,7 +29,7 @@ namespace NetworkCollapse
             TargetId = -1;
             SelectedLinkId = -1;
             SelectedId = id;
-            if (model != null && id >= 0 && id < model.Nodes.Count)
+            if (inspectorController != null && inspectorController.ValidNode(id))
             {
                 var node = model.Nodes[id];
                 vlanField.SetValueWithoutNotify(node.VlanId);

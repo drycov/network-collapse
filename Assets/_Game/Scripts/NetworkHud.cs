@@ -124,7 +124,13 @@ namespace NetworkCollapse
             statusBar.style.marginLeft = 12;
             statusBar.style.marginTop = 8;
             top.Add(statusBar);
-            top.Add(ActionButton("МЕНЮ", () => OpenMenu(true)));
+            var menuButton = ActionButton("☰  МЕНЮ", () => { OpenMenu(true); PauseRequested?.Invoke(); });
+            menuButton.style.position = Position.Absolute;
+            menuButton.style.right = 10;
+            menuButton.style.top = 2;
+            menuButton.style.width = 110;
+            menuButton.style.height = 30;
+            top.Add(menuButton);
             alertBanner = Heading("", 12);
             alertBanner.style.position = Position.Absolute;
             alertBanner.style.top = 45;
@@ -461,7 +467,7 @@ namespace NetworkCollapse
             menuOpen = open;
             if (mainMenu != null) mainMenu.style.display = open ? DisplayStyle.Flex : DisplayStyle.None;
             if (leftDock != null) leftDock.style.display = open ? DisplayStyle.None : DisplayStyle.Flex;
-            if (rightDock != null) rightDock.style.display = open ? DisplayStyle.None : DisplayStyle.Flex;
+            if (rightDock != null) rightDock.style.display = open || (SelectedId < 0 && SelectedLinkId < 0 && !BuildMode) ? DisplayStyle.None : DisplayStyle.Flex;
         }
         public void ToggleMenu() => OpenMenu(!menuOpen);
         public void ShowInspector(bool show)
@@ -661,6 +667,7 @@ namespace NetworkCollapse
         public void Refresh()
         {
             if (model == null || kpis == null) return;
+            if (rightDock != null && !menuOpen) rightDock.style.display = SelectedId >= 0 || SelectedLinkId >= 0 || BuildMode ? DisplayStyle.Flex : DisplayStyle.None;
             if (world != null && marketSummary != null)
             {
                 marketSummary.text = world.Summary() + "\n" + world.MarketNews;

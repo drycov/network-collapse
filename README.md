@@ -111,3 +111,14 @@ Unverified: this change has not been compiled, visually inspected or tested in t
 ## Operations console UI upgrade
 
 The runtime console has two progress gauges (availability and level objective), a live failure banner, a selected equipment/link utilization gauge, and an overlay shown on game over. Pause/resume uses **P** or the in-game control; simulation ticks stop while paused. **1 / 2 / 3** switch between Network, Missions, and Inventory screens. These are foundation pieces for a more game-ready HUD, not a complete production-ready game. The Unity 6 runtime compilation, responsive layout and visual behavior must still be validated in Editor, standalone and Web builds.
+
+## Sequential game UX and persistence update (Unity 6)
+
+1. Adaptive HUD: width-sensitive left/right operations panels and smaller status-header typography.
+2. Dispatcher dialogue: mission briefing modal, opened from Missions and on first start.
+3. Settings: fourth HUD tab with persisted volume, mute and low-graphics 30 FPS mode. Shortcuts 1–3 still select Network/Missions/Inventory.
+4. Save/load: the existing PlayerPrefs JSON campaign save now has a companion network snapshot (node configuration, failures, repairs, link topology/capacity, economy, score and level). A snapshot is restored on startup. "Start a new shift" discards both saves and starts fresh; simulation-generated route tables are rebuilt after loading.
+5. Tutorial: first-time guided steps for selecting a device, opening missions and building a link; completion is tracked with PlayerPrefs.
+6. Balance: early funds increased to 180, initial upkeep softened, and early levels have a less severe game-over threshold.
+
+Limits: save versioning/migration is not implemented; RNG state, packet-flow animation phases, current voice clip and precise in-progress routing flow allocations are not saved. A fresh deterministic routing pass computes the post-load display/availability. Dialogues are briefing overlays rather than branching conversations. Responsive layout requires validation at multiple resolutions, and graphics mode is a simple frame-rate/vsync preference rather than full quality presets. Unity Editor compilation and player builds were not run.

@@ -168,3 +168,9 @@ Purchasing a rival now provisions its saved site coordinates as new owned distri
 The Network, Missions, Inventory, Market and Settings navigation now works differently: **Network** remains in the left dock; **Missions**, **Inventory**, **Market** and **Settings** open separate centered scrollable windows over the physical map with explicit close controls. The inspector remains contextual. Escape opens the main menu, and the world view is blocked from receiving clicks under modal windows.
 
 Known limitations: imported networks currently have a simple hub/backhaul structure, not the rival's full pre-acquisition routing table. Network ownership and maintenance are reflected through physical equipment and financial upkeep, rather than separately identified subsidiaries/maintenance contracts. Unity Editor compilation and visual verification are still needed.
+
+## Subsidiaries and acquired-network traceability
+
+Each integrated competitor's physical devices now retain the original operator name and fictional ASN. The world save keeps a subsidiary registry (city, original ASN, number of sites and transferred subscribers, recurring maintenance obligation, inherited-fault estimate). The Market game window shows that portfolio, and the node inspector identifies acquired assets. Acquired-network maintenance continues to be charged by the physical network simulation. Escape closes secondary game windows before invoking the pause menu.
+
+The former rival's actual BGP RIB, historical monitoring events, and per-asset service contracts are not yet imported. Build validation in Unity Editor remains outstanding.

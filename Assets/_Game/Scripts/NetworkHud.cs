@@ -43,6 +43,7 @@ namespace NetworkCollapse
         public event Action<int> CityExpansionRequested;
         public event Action<int, int> ContractRequested;
         public event Action<int> RivalAcquisitionRequested;
+        public event Action<int> SubsidiaryRepairRequested;
         public event Action<int, int> RivalNegotiationRequested;
         private Label worldMapLabel, bgpTableLabel;
         private VisualElement geographicMap;
@@ -659,9 +660,16 @@ namespace NetworkCollapse
             marketTab.Add(Heading("ДОЧЕРНИЕ ОПЕРАТОРЫ", 14));
             if (world.Subsidiaries != null)
                 foreach (var company in world.Subsidiaries)
+                {
+                    int subsidiaryIndex = world.Subsidiaries.IndexOf(company);
                     marketTab.Add(Body(company.Name + " · AS" + company.OriginalAsn +
                         "\nПлощадок: " + company.SiteCount + " · Клиентов: " + company.CustomerCount +
-                        "\nСодержание: " + company.MaintenancePerTick + " кр./тик"));
+                        "\nТехслужба: " + company.TechnicalStaff + " · Содержание: " + company.MaintenancePerTick + " кр./тик" +
+                        "\nУнаследованный транзит: " + (company.InheritedTransit == null ? 0 : company.InheritedTransit.Count) +
+                        " · Маршрутов: " + (company.InheritedRoutes == null ? 0 : company.InheritedRoutes.Count)));
+                    marketTab.Add(ActionButton("ОТПРАВИТЬ РЕМОНТНУЮ БРИГАДУ · " + company.Name,
+                        () => SubsidiaryRepairRequested?.Invoke(subsidiaryIndex)));
+                }
             marketTab.Add(Heading("BGP / RIB", 14));
             bgpTableLabel = Body(""); marketTab.Add(bgpTableLabel);
             Refresh();

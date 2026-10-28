@@ -120,6 +120,32 @@ namespace NetworkCollapse
             Money -= cost; Customers += count;
             return true;
         }
+        public bool IntegrateRivalSites(System.Collections.Generic.List<Vector2> sites, int customers, int purchasePrice)
+        {
+            if (sites == null || sites.Count == 0 || sites.Count + Nodes.Count > 90 ||
+                Money < purchasePrice || GameOver) return false;
+            // Provision all purchased sites and a backhaul in one atomic game action.
+            int initialCount = Nodes.Count;
+            int parent = Nodes.FindIndex(n => n.Tier == EquipmentTier.Distribution);
+            if (parent < 0) parent = 0;
+            for (int i = 0; i < sites.Count; i++)
+            {
+                int site = AddProceduralNode(i == 0 ? EquipmentTier.Distribution : EquipmentTier.Access,
+                    sites[i] * .22f + new Vector2(-3f, -2f));
+                int upstream = i == 0 ? parent : initialCount;
+                AddLink(upstream, site, i == 0 ? 220f : 80f, false);
+                // Acquired networks may contain deferred maintenance.
+                if (i % 3 == 2) Nodes[site].Failed = true;
+                if (i == 1) Links[Links.Count - 1].Failed = true;
+            }
+            Money -= purchasePrice;
+            Customers += Mathf.Max(0, customers);
+            Nodes[initialCount].Demand += customers * .12f;
+            MarketReach += sites.Count;
+            Step();
+            return true;
+        }
+
         public bool ExpandNetworkFree()
         {
             int fee = 70 + MarketReach * 25;

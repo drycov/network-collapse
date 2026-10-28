@@ -24,12 +24,15 @@ namespace NetworkCollapse
         public void Initialize(NetworkSimulation simulation)
         {
             model = simulation;
-            if (document != null) Destroy(document);
-            document = gameObject.AddComponent<UIDocument>();
-            panelSettings = ScriptableObject.CreateInstance<PanelSettings>();
-            panelSettings.scaleMode = PanelScaleMode.ConstantPixelSize;
-            document.panelSettings = panelSettings;
+            if (document == null)
+            {
+                document = gameObject.AddComponent<UIDocument>();
+                panelSettings = ScriptableObject.CreateInstance<PanelSettings>();
+                panelSettings.scaleMode = PanelScaleMode.ConstantPixelSize;
+                document.panelSettings = panelSettings;
+            }
             var root = document.rootVisualElement;
+            root.Clear();
             root.style.flexDirection = FlexDirection.Row;
             root.style.justifyContent = Justify.SpaceBetween;
             root.style.height = Length.Percent(100);

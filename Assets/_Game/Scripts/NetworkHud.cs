@@ -492,6 +492,22 @@ namespace NetworkCollapse
                 point.style.color = city.Coverage > 0 ? new Color(.52f, 1f, .72f) : new Color(.8f, .87f, .92f);
                 geographicMap.Add(point);
             }
+            foreach (var rival in world.Rivals)
+            {
+                if (rival.Acquired || rival.NetworkSites == null) continue;
+                foreach (var site in rival.NetworkSites)
+                {
+                    var marker = new Label("◆");
+                    marker.tooltip = rival.Name + " / AS" + rival.Asn;
+                    marker.style.position = Position.Absolute;
+                    marker.style.left = Length.Percent(Mathf.Clamp(site.x / 70f * 100f, 2f, 94f));
+                    marker.style.top = Length.Percent(Mathf.Clamp(site.y / 33f * 100f, 3f, 88f));
+                    marker.style.color = new Color(1f, .45f, .48f);
+                    marker.style.fontSize = 11;
+                    marker.pickingMode = PickingMode.Ignore;
+                    geographicMap.Add(marker);
+                }
+            }
             worldMapLabel = Body(""); marketTab.Add(worldMapLabel);
             marketTab.Add(Heading("ГОРОДА И ПОКРЫТИЕ", 14));
             for (int i = 0; i < world.Cities.Count; i++)

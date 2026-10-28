@@ -11,6 +11,7 @@ namespace NetworkCollapse
     public sealed class NetworkAudio : MonoBehaviour
     {
         private AudioSource source;
+        private AudioSource voiceSource;
         private readonly Dictionary<SoundCue, AudioClip> clips = new Dictionary<SoundCue, AudioClip>();
         public float Volume { get; private set; } = .48f;
         public bool Muted { get; private set; }
@@ -20,12 +21,27 @@ namespace NetworkCollapse
         {
             source = gameObject.AddComponent<AudioSource>();
             source.playOnAwake = false;
+            voiceSource = gameObject.AddComponent<AudioSource>();
+            voiceSource.playOnAwake = false;
+            voiceSource.spatialBlend = 0f;
             source.spatialBlend = 0f;
             foreach (SoundCue cue in Enum.GetValues(typeof(SoundCue)))
             {
                 string key = cue.ToString().ToLowerInvariant();
                 clips[cue] = Resources.Load<AudioClip>("Audio/" + key) ?? Synthesize(cue);
             }
+        }
+
+        public bool PlayVoice(string cueId)
+        {
+            if (Muted || voiceSource == null || string.IsNullOrEmpty(cueId)) return false;
+            var clip = Resources.Load<AudioClip>("Voice/" + cueId);
+            if (clip == null) return false;
+            voiceSource.Stop();
+            voiceSource.clip = clip;
+            voiceSource.volume = Volume;
+            voiceSource.Play();
+            return true;
         }
 
         public void SetVolume(float value) { Volume = Mathf.Clamp01(value); }

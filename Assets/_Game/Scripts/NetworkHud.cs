@@ -4,7 +4,7 @@ using UnityEngine.UIElements;
 
 namespace NetworkCollapse
 {
-    public sealed class NetworkHud : MonoBehaviour
+    public sealed partial class NetworkHud : MonoBehaviour
     {
         private NetworkSimulation model;
         private UIDocument document;
@@ -87,17 +87,7 @@ namespace NetworkCollapse
         public event Action ResetRequested;
         public int SelectedId { get; private set; } = -1;
 
-        public bool IsPointerOverHud(Vector2 screen)
-        {
-            if (menuOpen || (windowLayer != null && windowLayer.resolvedStyle.display != DisplayStyle.None))
-                return true;
-            float leftWidth = leftDock != null && leftDock.resolvedStyle.display != DisplayStyle.None
-                ? leftDock.resolvedStyle.width + 16f : 0f;
-            float rightWidth = rightDock != null && rightDock.resolvedStyle.display != DisplayStyle.None
-                ? rightDock.resolvedStyle.width + 16f : 0f;
-            return screen.y > Screen.height - 65f ||
-                screen.x < leftWidth || screen.x > Screen.width - rightWidth;
-        }
+
 
         public void Initialize(NetworkSimulation simulation)
         {
@@ -436,21 +426,7 @@ namespace NetworkCollapse
             if (footerStatus != null) footerStatus.text = paused ? "● СИМУЛЯЦИЯ ПРИОСТАНОВЛЕНА" : "● ОПЕРАТОР НА ЛИНИИ   |   ЛКМ: ВЫБОР   |   КОЛЕСО: МАСШТАБ   |   F: ЦЕНТР";
         }
 
-        private static VisualElement SettingsSection(string heading, string description)
-        {
-            var section = new VisualElement();
-            section.style.paddingTop = 17;
-            section.style.paddingBottom = 14;
-            section.style.paddingLeft = 16;
-            section.style.paddingRight = 16;
-            section.style.marginBottom = 14;
-            section.style.backgroundColor = new Color(.055f, .13f, .17f, 1f);
-            section.style.borderLeftWidth = 3;
-            section.style.borderLeftColor = new Color(.25f, .78f, .7f, 1f);
-            section.Add(Heading(heading, 15));
-            section.Add(Body(description));
-            return section;
-        }
+
 
         private static VisualElement Panel(float width)
         {
@@ -533,342 +509,8 @@ namespace NetworkCollapse
             return button;
         }
 
-        public void OpenMenu(bool open)
-        {
-            menuOpen = open;
-            if (mainMenu != null) mainMenu.style.display = open ? DisplayStyle.Flex : DisplayStyle.None;
-            if (dialogueOverlay != null && open) dialogueOverlay.style.display = DisplayStyle.None;
-            if (open && windowLayer != null) windowLayer.style.display = DisplayStyle.None;
-            if (windowLayer != null) windowLayer.style.display = open || activeTab == "operations" ? DisplayStyle.None : DisplayStyle.Flex;
-            if (leftDock != null) leftDock.style.display = open ? DisplayStyle.None : DisplayStyle.Flex;
-            if (rightDock != null) rightDock.style.display = open || (SelectedId < 0 && SelectedLinkId < 0 && !BuildMode) ? DisplayStyle.None : DisplayStyle.Flex;
-        }
-        public void ToggleMenu() => OpenMenu(!menuOpen);
-        public void CloseGameWindow() => ShowTab("operations");
-        public void ShowInspector(bool show)
-        {
-            if (rightDock != null && !menuOpen) rightDock.style.display = show ? DisplayStyle.Flex : DisplayStyle.None;
-        }
 
-        public void SetTutorial(string instruction)
-        {
-            if (tutorialLabel != null) tutorialLabel.text = instruction ?? "";
-        }
-        public void ShowBriefing()
-        {
-            if (dialogueOverlay == null || campaign == null) return;
-            briefingText.text = campaign.ChapterTitle + "\n\n" + campaign.StoryBriefing + "\n\n" + campaign.MissionText();
-            dialogueOverlay.style.display = DisplayStyle.Flex;
-        }
-        private void AdjustLayout(VisualElement root)
-        {
-            float width = root.resolvedStyle.width;
-            if (width < 200f || Mathf.Abs(width - lastLayoutWidth) < 2f) return;
-            lastLayoutWidth = width;
-            bool compact = width < 1100f;
-            float panelWidth = compact ? Mathf.Clamp(width * .25f, 190f, 260f) : 310f;
-            if (leftDock != null) leftDock.style.width = panelWidth;
-            if (rightDock != null) rightDock.style.width = panelWidth;
-            if (statusBar != null) statusBar.style.fontSize = width < 900f ? 10 : 13;
-            if (hudAlert != null)
-            {
-                hudAlert.style.left = panelWidth + 22f;
-                hudAlert.style.right = panelWidth + 22f;
-            }
-            if (currentWindow != null)
-            {
-                currentWindow.style.width = width < 800 ? Length.Percent(94) :
-                    width < 1300 ? Length.Percent(84) : Length.Percent(72);
-                currentWindow.style.maxWidth = 960;
-                currentWindow.style.height = Length.Percent(width < 800 ? 89 : 82);
-            }
-            if (mainMenuCard != null) mainMenuCard.style.maxWidth = Length.Percent(92);
-        }
-
-        public void SelectScreen(int screen)
-        {
-            ShowTab(screen == 1 ? "missions" : screen == 2 ? "inventory" : "operations");
-        }
-
-        private void CreateWindowLayer(VisualElement root)
-        {
-            windowLayer = new VisualElement();
-            windowLayer.style.position = Position.Absolute;
-            windowLayer.style.left = 0; windowLayer.style.right = 0;
-            windowLayer.style.top = 0; windowLayer.style.bottom = 0;
-            windowLayer.style.justifyContent = Justify.Center;
-            windowLayer.style.alignItems = Align.Center;
-            windowLayer.style.backgroundColor = new Color(0f, .01f, .025f, .62f);
-            windowContent = new ScrollView(ScrollViewMode.Vertical);
-            windowContent.style.width = Length.Percent(100);
-            windowContent.style.flexGrow = 1;
-            windowContent.style.flexShrink = 1;
-            windowContent.style.minHeight = 0;
-            windowContent.style.flexBasis = 0;
-            windowContent.verticalScrollerVisibility = ScrollerVisibility.Auto;
-            windowContent.style.overflow = Overflow.Hidden;
-            windowContent.contentContainer.style.flexShrink = 0;
-            windowContent.contentContainer.style.width = Length.Percent(100);
-            windowContent.style.paddingLeft = 16;
-            windowContent.style.paddingRight = 16;
-            windowContent.style.paddingBottom = 16;
-            windowContent.style.paddingTop = 12;
-            var frame = new VisualElement();
-            currentWindow = frame;
-            frame.style.width = Length.Percent(72);
-            frame.style.maxWidth = 860;
-            frame.style.height = Length.Percent(82);
-            frame.style.minHeight = 260;
-            frame.style.maxHeight = Length.Percent(88);
-            frame.style.overflow = Overflow.Hidden;
-            frame.style.flexShrink = 1;
-            frame.style.backgroundColor = new Color(.015f, .06f, .085f, 1f);
-            frame.style.borderTopWidth = 2;
-            frame.style.borderTopColor = new Color(.24f, .78f, .71f);
-            var header = new VisualElement();
-            header.style.flexDirection = FlexDirection.Row;
-            header.style.justifyContent = Justify.SpaceBetween;
-            header.style.paddingLeft = 16;
-            header.style.paddingTop = 12;
-            header.style.paddingRight = 16;
-            header.style.minHeight = 52;
-            header.style.flexShrink = 0;
-            var caption = Heading("ОКНО ОПЕРАЦИЙ", 17);
-            caption.name = "window-title";
-            header.Add(caption);
-            header.Add(ActionButton("ЗАКРЫТЬ  ×", () => ShowTab("operations")));
-            frame.Add(header);
-            frame.Add(windowContent);
-            windowLayer.Add(frame);
-            root.Add(windowLayer);
-            windowLayer.style.display = DisplayStyle.None;
-            AdjustLayout(root);
-        }
-
-        private void ShowTab(string tab)
-        {
-            activeTab = tab;
-            if (operationsTab != null) operationsTab.style.display = DisplayStyle.Flex;
-            foreach (var panel in new[] { missionsTab, inventoryTab, marketTab, settingsTab })
-                if (panel != null) panel.style.display = DisplayStyle.None;
-            if (windowLayer == null) return;
-            if (tab == "market" && world != null) RenderMarket();
-            if (tab == "operations")
-            {
-                windowLayer.style.display = DisplayStyle.None;
-                windowContent.Clear();
-                return;
-            }
-            VisualElement content = tab == "missions" ? missionsTab :
-                tab == "inventory" ? inventoryTab :
-                tab == "market" ? marketTab : settingsTab;
-            if (content == null) return;
-            // Reparent only when switching screens; avoid resetting scroll position on redundant calls.
-            if (windowContent.childCount == 1 && windowContent[0] == content)
-            {
-                windowLayer.style.display = menuOpen ? DisplayStyle.None : DisplayStyle.Flex;
-                return;
-            }
-            windowContent.Clear();
-            windowContent.Add(content);
-            content.style.display = DisplayStyle.Flex;
-            content.style.flexShrink = 0;
-            content.style.width = Length.Percent(100);
-            var caption = currentWindow.Q<Label>("window-title");
-            if (caption != null) caption.text = tab == "missions" ? "MISSION CONTROL" :
-                tab == "inventory" ? "ИНВЕНТАРЬ И РЕСУРСЫ" :
-                tab == "market" ? "СТРАТЕГИЧЕСКАЯ КАРТА / РЫНОК" : "НАСТРОЙКИ";
-            windowLayer.style.display = menuOpen ? DisplayStyle.None : DisplayStyle.Flex;
-        }
-
-        public void SetWorld(IspWorld value)
-        {
-            world = value;
-            RenderMarket();
-        }
-
-        private void RenderMarket()
-        {
-            if (marketTab == null || world == null) return;
-            marketTab.Clear();
-            marketTab.style.width = Length.Percent(100);
-            marketTab.style.flexShrink = 0;
-            marketTab.Add(Heading("STRATEGY / ISP MARKET", 17));
-            marketSummary = Body(world.Summary());
-            marketSummary.style.backgroundColor = new Color(.055f, .13f, .16f);
-            marketSummary.style.paddingTop = 12;
-            marketSummary.style.paddingBottom = 12;
-            marketSummary.style.paddingLeft = 12;
-            marketSummary.style.paddingRight = 12;
-            marketTab.Add(marketSummary);
-            var tabs = new VisualElement();
-            tabs.style.flexDirection = FlexDirection.Row;
-            tabs.style.flexWrap = Wrap.Wrap;
-            marketTab.Add(tabs);
-            MarketTab(tabs, "ГОРОДА", "cities");
-            MarketTab(tabs, "ТАРИФЫ", "contracts");
-            MarketTab(tabs, "M&A", "rivals");
-            MarketTab(tabs, "ТРАНЗИТ / BGP", "bgp");
-            marketTab.Add(Body(world.MarketNews ?? ""));
-            if (marketMode == "cities")
-            {
-                marketTab.Add(Heading("КАРТА ПОКРЫТИЯ", 15));
-                geographicMap = new VisualElement();
-                geographicMap.style.height = 230;
-                geographicMap.style.flexShrink = 0;
-                geographicMap.style.backgroundColor = new Color(.025f, .11f, .15f, 1f);
-                geographicMap.style.borderBottomWidth = 1;
-                geographicMap.style.borderBottomColor = new Color(.2f, .6f, .6f);
-                marketTab.Add(geographicMap);
-                foreach (var city in world.Cities)
-                {
-                    int index = world.Cities.IndexOf(city);
-                    var marker = new Button(() => { marketCityIndex = index; RenderMarket(); }) { text = city.Coverage > 0 ? "●" : "○" };
-                    marker.tooltip = city.Country + " / " + city.Name;
-                    marker.style.position = Position.Absolute;
-                    marker.style.left = Length.Percent(Mathf.Clamp(city.MapPosition.x / 70f * 100f, 3, 91));
-                    marker.style.top = Length.Percent(Mathf.Clamp(city.MapPosition.y / 33f * 100f, 5, 85));
-                    marker.style.width = 25; marker.style.height = 25;
-                    marker.style.color = city.Coverage > 0 ? new Color(.45f, 1f, .72f) : new Color(.78f, .88f, .9f);
-                    marker.style.backgroundColor = new Color(.04f, .23f, .29f);
-                    geographicMap.Add(marker);
-                }
-                foreach (var rival in world.Rivals)
-                {
-                    if (rival.Acquired || rival.NetworkSites == null) continue;
-                    foreach (var site in rival.NetworkSites)
-                    {
-                        var marker = new Label("◆");
-                        marker.tooltip = rival.Name + " / AS" + rival.Asn;
-                        marker.style.position = Position.Absolute;
-                        marker.style.left = Length.Percent(Mathf.Clamp(site.x / 70f * 100f, 2, 94));
-                        marker.style.top = Length.Percent(Mathf.Clamp(site.y / 33f * 100f, 3, 88));
-                        marker.style.color = new Color(1f, .5f, .5f);
-                        marker.pickingMode = PickingMode.Ignore;
-                        geographicMap.Add(marker);
-                    }
-                }
-                marketTab.Add(Heading("ГОРОДА", 15));
-                var cityRow = new VisualElement();
-                cityRow.style.flexDirection = FlexDirection.Row;
-                cityRow.style.flexWrap = Wrap.Wrap;
-                marketTab.Add(cityRow);
-                for (int i = 0; i < world.Cities.Count; i++)
-                {
-                    int selected = i;
-                    var button = ActionButton(world.Cities[i].Name, () => { marketCityIndex = selected; RenderMarket(); });
-                    button.style.minWidth = 100; button.style.marginRight = 6;
-                    cityRow.Add(button);
-                }
-                if (world.Cities.Count > 0)
-                {
-                    marketCityIndex = Mathf.Clamp(marketCityIndex, 0, world.Cities.Count - 1);
-                    var city = world.Cities[marketCityIndex];
-                    var card = SettingsSection(city.Name + " / " + city.Country, 
-                        "Население: " + city.Population + "   ·   Клиенты: " + city.Customers +
-                        "\nПокрытие: " + (city.Coverage > 0 ? "Активно" : "Не открыто"));
-                    marketTab.Add(card);
-                    int chosen = marketCityIndex;
-                    card.Add(ActionButton(city.Coverage > 0 ? "ПОКРЫТИЕ ОТКРЫТО" : "ОТКРЫТЬ ПОКРЫТИЕ",
-                        () => CityExpansionRequested?.Invoke(chosen)));
-                }
-            }
-            else if (marketMode == "contracts")
-            {
-                marketTab.Add(Heading("ПОДКЛЮЧЕНИЕ АБОНЕНТОВ", 15));
-                marketTab.Add(Body("Выберите город, затем тариф. Отображаются только подключённые территории."));
-                foreach (var city in world.Cities)
-                {
-                    if (city.Coverage <= 0) continue;
-                    int cityIndex = world.Cities.IndexOf(city);
-                    var card = SettingsSection(city.Name, "Клиентов: " + city.Customers);
-                    marketTab.Add(card);
-                    foreach (var tariff in world.Tariffs)
-                    {
-                        int tariffIndex = world.Tariffs.IndexOf(tariff);
-                        card.Add(ActionButton(tariff.Name + " · " + tariff.SpeedMbps + " Mbps · " + tariff.MonthlyPrice + " кр.",
-                            () => ContractRequested?.Invoke(cityIndex, tariffIndex)));
-                    }
-                }
-            }
-            else if (marketMode == "rivals")
-            {
-                marketTab.Add(Heading("КОНКУРЕНТЫ И ПОГЛОЩЕНИЯ", 15));
-                foreach (var rival in world.Rivals)
-                {
-                    if (rival.Acquired) continue;
-                    int index = world.Rivals.IndexOf(rival);
-                    int estimate = Mathf.CeilToInt((rival.Customers * 2 + rival.Assets * 20) * rival.OfferMultiplier);
-                    var card = SettingsSection(rival.Name + " / AS" + rival.Asn,
-                        rival.City + " · " + rival.Customers + " абонентов · " + rival.Assets +
-                        " площадок\nОценка покупки: " + estimate + " кр.");
-                    marketTab.Add(card);
-                    card.Add(ActionButton("ПЕРЕГОВОРЫ · 120%", () => RivalNegotiationRequested?.Invoke(index, 120)));
-                    card.Add(ActionButton("ПРИОБРЕСТИ КОМПАНИЮ", () => RivalAcquisitionRequested?.Invoke(index)));
-                }
-                marketTab.Add(Heading("ДОЧЕРНИЕ ОПЕРАТОРЫ", 15));
-                if (world.Subsidiaries != null)
-                    for (int i = 0; i < world.Subsidiaries.Count; i++)
-                    {
-                        int index = i;
-                        var subsidiary = world.Subsidiaries[i];
-                        var card = SettingsSection(subsidiary.Name + " / AS" + subsidiary.OriginalAsn,
-                            "Узлов: " + subsidiary.SiteCount + " · Абонентов: " + subsidiary.CustomerCount +
-                            "\nТехслужба: " + subsidiary.TechnicalStaff + " · Содержание: " + subsidiary.MaintenancePerTick + " кр./тик");
-                        marketTab.Add(card);
-                        card.Add(ActionButton("ОТПРАВИТЬ РЕМОНТНУЮ БРИГАДУ", () => SubsidiaryRepairRequested?.Invoke(index)));
-                    }
-            }
-            else
-            {
-                marketTab.Add(Heading("МАГИСТРАЛИ / ПИРИНГ", 15));
-                foreach (var partner in world.Partners)
-                {
-                    int index = world.Partners.IndexOf(partner);
-                    var card = SettingsSection(partner.Name + " / AS" + partner.Asn,
-                        "Пропускная способность: " + partner.Capacity + " Mbps · Стоимость: " + partner.Cost +
-                        " кр. · " + (partner.Active ? "Подключён" : "Не подключён"));
-                    marketTab.Add(card);
-                    card.Add(ActionButton(partner.Active ? "СЕССИЯ АКТИВНА" : "ЗАКЛЮЧИТЬ ДОГОВОР",
-                        () => PartnerConnectionRequested?.Invoke(index)));
-                }
-                marketTab.Add(Heading("МАРШРУТЫ BGP / RIB", 15));
-                bgpTableLabel = Body(world.BgpSummary());
-                marketTab.Add(bgpTableLabel);
-            }
-        }
-
-        private void MarketTab(VisualElement container, string text, string mode)
-        {
-            var button = ActionButton(text, () => { marketMode = mode; RenderMarket(); });
-            button.style.marginRight = 7;
-            button.style.minWidth = 105;
-            button.style.backgroundColor = marketMode == mode ?
-                new Color(.1f, .34f, .37f) : new Color(.045f, .15f, .19f);
-            container.Add(button);
-        }
-
-        public void SetCampaign(NetworkCampaign value)
-        {
-            campaign = value;
-            previewMission = -1;
-            if (missionPicker != null && campaign != null)
-            {
-                missionPicker.Clear();
-                for (int i = 0; i < campaign.Missions.Count; i++)
-                {
-                    int index = i;
-                    missionPicker.Add(ActionButton((i + 1) + ". " + campaign.Missions[i].Title, () => { previewMission = index; Refresh(); }));
-                }
-            }
-            Refresh();
-        }
-
-        public void AddEvent(string message)
-        {
-            events.Insert(0, $"[{DateTime.Now:HH:mm:ss}] {message}");
-            if (events.Count > 8) events.RemoveAt(events.Count - 1);
-            if (eventLog != null) eventLog.text = string.Join("\n", events);
+events);
         }
 
         public void SetBuildMode(bool value)
@@ -880,61 +522,13 @@ namespace NetworkCollapse
 
         private bool desiredAdmin = true;
         private RoutingMode desiredRouting = RoutingMode.Static;
-        private void UpdateConfigButtons()
-        {
-            adminToggle.text = desiredAdmin ? "Административно: включено" : "Административно: выключено";
-            routingToggle.text = "Routing: " + desiredRouting;
-        }
 
-        public void SelectLink(int index)
-        {
-            SelectedId = -1;
-            TargetId = -1;
-            SelectedLinkId = index;
-            Refresh();
-        }
 
-        public void SelectTarget(int id)
-        {
-            TargetId = id;
-            Refresh();
-        }
 
-        private int FindSelectedLink() => model == null ? -1 : model.FindLink(SelectedId, TargetId);
-        private int ActiveLink() => SelectedLinkId >= 0 ? SelectedLinkId : FindSelectedLink();
 
-        public void Select(int id)
-        {
-            TargetId = -1;
-            SelectedLinkId = -1;
-            SelectedId = id;
-            if (model != null && id >= 0 && id < model.Nodes.Count)
-            {
-                var node = model.Nodes[id];
-                vlanField.SetValueWithoutNotify(node.VlanId);
-                mtuField.SetValueWithoutNotify(node.Mtu);
-                desiredAdmin = node.AdminEnabled;
-                desiredRouting = node.Routing;
-                UpdateConfigButtons();
-            }
-            Refresh();
-        }
 
-        public void Refresh()
-        {
-            if (model == null || kpis == null) return;
-            if (rightDock != null && !menuOpen) rightDock.style.display = SelectedId >= 0 || SelectedLinkId >= 0 || BuildMode ? DisplayStyle.Flex : DisplayStyle.None;
-            if (world != null && marketSummary != null)
-            {
-                marketSummary.text = world.Summary();
-                if (bgpTableLabel != null && marketMode == "bgp") bgpTableLabel.text = world.BgpSummary();
-            }
-            availabilityBar.value = model.Availability * 100f;
-            objectiveBar.value = model.ObjectiveTimer <= 0 ? 0 : Mathf.Clamp01(model.ObjectiveProgress / model.ObjectiveTimer) * 100f;
-            alertBanner.text = model.GameOver ? "КРИТИЧЕСКАЯ ПОТЕРЯ СВЯЗНОСТИ" : model.FailedNodes + model.FailedLinks > 0 ? "АКТИВНЫЕ АВАРИИ: " + (model.FailedNodes + model.FailedLinks) : "СЕТЬ РАБОТАЕТ ШТАТНО";
-            alertBanner.style.color = model.GameOver ? new Color(1f, .32f, .32f) : model.FailedNodes + model.FailedLinks > 0 ? new Color(1f, .69f, .3f) : new Color(.36f, .95f, .79f);
-            endingOverlay.style.display = model.GameOver ? DisplayStyle.Flex : DisplayStyle.None;
-            endingTitle.text = model.GameOver ? "NETWORK COLLAPSE" : "";
+
+itle.text = model.GameOver ? "NETWORK COLLAPSE" : "";
             endingDescription.text = model.GameOver ? "Сеть потеряла устойчивость. Восстановите управление, начав новую смену.\nИтоговый счёт: " + model.Score : "";
 
             if (campaign != null)

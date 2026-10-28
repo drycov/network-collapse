@@ -307,7 +307,7 @@ namespace NetworkCollapse
             title.text = $"{node.Hostname} · {node.Tier}";
             string repairInfo = node.RepairRemaining > 0f ? $"\nРемонт: {node.RepairRemaining:0.0} с" : "";
             details.text =
-                $"Роль: {node.Role} | Управление: {node.ManagementIp}\\nVLAN: {node.VlanId} | MTU: {node.Mtu} | Routing: {node.Routing}\\n" +
+                $"Роль: {node.Role} | Управление: {node.ManagementIp}\nVLAN: {node.VlanId} | MTU: {node.Mtu} | Routing: {node.Routing}\n" +
                 $"Состояние: {node.Status}{repairInfo}\n" +
                 $"Нагрузка: {node.Load:0.0} / {node.Capacity:0.0}\n" +
                 $"Потребление: {node.Demand:0.0}\n" +

@@ -15,6 +15,13 @@ namespace NetworkCollapse
         private Label endingTitle, endingDescription;
         private ProgressBar availabilityBar, objectiveBar, inspectorLoad;
         private Button pauseButton;
+        private VisualElement dialogueOverlay, settingsTab;
+        private Label tutorialLabel, briefingText;
+        private Slider volumeSlider;
+        private Toggle muteToggle;
+        public event Action<float> VolumeChanged;
+        public event Action<bool> MuteChanged;
+        public event Action<bool> PerformanceModeChanged;
         public event Action PauseRequested;
         private Button repair, failure, build, upgrade, repairLink, nextLevel;
         private Label connectionInfo, eventLog, missionLabel, storyLabel, achievementLabel, inventoryLabel, boardLabel, incidentLabel, dialogueLabel;
@@ -75,6 +82,7 @@ namespace NetworkCollapse
             root.style.justifyContent = Justify.SpaceBetween;
             root.style.height = Length.Percent(100);
             root.style.paddingTop = 50;
+            root.RegisterCallback<GeometryChangedEvent>(evt => AdjustLayout(root));
             root.style.paddingBottom = 14;
             root.style.paddingLeft = 10;
             root.style.paddingRight = 10;
@@ -124,6 +132,7 @@ namespace NetworkCollapse
             nav.Add(TabButton("СЕТЬ", () => ShowTab("operations")));
             nav.Add(TabButton("МИССИИ", () => ShowTab("missions")));
             nav.Add(TabButton("СКЛАД", () => ShowTab("inventory")));
+            nav.Add(TabButton("НАСТР.", () => ShowTab("settings")));
             left.Add(nav);
             nav.style.marginTop = 12;
             nav.style.marginBottom = 12;
@@ -133,6 +142,19 @@ namespace NetworkCollapse
             left.Add(operationsTab);
             left.Add(missionsTab);
             left.Add(inventoryTab);
+            settingsTab = new VisualElement(); left.Add(settingsTab);
+            settingsTab.style.flexShrink = 0;
+            settingsTab.Add(Heading("АУДИО", 15));
+            volumeSlider = new Slider("Громкость", 0, 1) { value = PlayerPrefs.GetFloat("NC.Volume", .48f) };
+            volumeSlider.RegisterValueChangedCallback(e => { PlayerPrefs.SetFloat("NC.Volume", e.newValue); VolumeChanged?.Invoke(e.newValue); });
+            settingsTab.Add(volumeSlider);
+            muteToggle = new Toggle("Отключить звук") { value = PlayerPrefs.GetInt("NC.Muted", 0) != 0 };
+            muteToggle.RegisterValueChangedCallback(e => { PlayerPrefs.SetInt("NC.Muted", e.newValue ? 1 : 0); MuteChanged?.Invoke(e.newValue); });
+            settingsTab.Add(muteToggle);
+            settingsTab.Add(Heading("ГРАФИКА", 15));
+            var performance = new Toggle("Экономичный режим") { value = PlayerPrefs.GetInt("NC.LowGraphics", 0) != 0 };
+            performance.RegisterValueChangedCallback(e => { PlayerPrefs.SetInt("NC.LowGraphics", e.newValue ? 1 : 0); PerformanceModeChanged?.Invoke(e.newValue); });
+            settingsTab.Add(performance);
             foreach (var tab in new[] { operationsTab, missionsTab, inventoryTab })
             {
                 tab.style.flexShrink = 0;
@@ -165,6 +187,7 @@ namespace NetworkCollapse
             missionsTab.Add(Heading("MISSION CONTROL / СЮЖЕТ", 14));
             storyLabel = Body("");
             missionsTab.Add(storyLabel);
+            missionsTab.Add(ActionButton("ОТКРЫТЬ БРИФИНГ", () => ShowBriefing()));
             missionLabel = Body("");
             missionsTab.Add(missionLabel);
             missionsTab.Add(Heading("ДОСКА ЗАДАНИЙ", 14));
@@ -243,6 +266,28 @@ namespace NetworkCollapse
             endingDescription = Body(""); endingOverlay.Add(endingDescription);
             endingOverlay.Add(ActionButton("НАЧАТЬ НОВУЮ СМЕНУ", () => ResetRequested?.Invoke()));
             root.Add(endingOverlay);
+            dialogueOverlay = new VisualElement();
+            dialogueOverlay.style.position = Position.Absolute;
+            dialogueOverlay.style.left = Length.Percent(24);
+            dialogueOverlay.style.top = Length.Percent(19);
+            dialogueOverlay.style.width = Length.Percent(52);
+            dialogueOverlay.style.paddingLeft = 22;
+            dialogueOverlay.style.paddingRight = 22;
+            dialogueOverlay.style.paddingTop = 22;
+            dialogueOverlay.style.paddingBottom = 22;
+            dialogueOverlay.style.backgroundColor = new Color(.012f, .07f, .09f, .99f);
+            dialogueOverlay.Add(Heading("ВХОДЯЩЕЕ СООБЩЕНИЕ / NOC", 20));
+            briefingText = Body(""); dialogueOverlay.Add(briefingText);
+            dialogueOverlay.Add(ActionButton("ПРИНЯТЬ ЗАДАНИЕ", () => dialogueOverlay.style.display = DisplayStyle.None));
+            root.Add(dialogueOverlay);
+            dialogueOverlay.style.display = DisplayStyle.None;
+            tutorialLabel = Heading("", 13);
+            tutorialLabel.style.position = Position.Absolute;
+            tutorialLabel.style.left = Length.Percent(27);
+            tutorialLabel.style.right = Length.Percent(27);
+            tutorialLabel.style.bottom = 37;
+            tutorialLabel.style.unityTextAlign = TextAnchor.MiddleCenter;
+            root.Add(tutorialLabel);
             footerStatus = Body("");
             footerStatus.style.position = Position.Absolute;
             footerStatus.style.bottom = 3;
@@ -349,6 +394,27 @@ namespace NetworkCollapse
             return button;
         }
 
+        public void SetTutorial(string instruction)
+        {
+            if (tutorialLabel != null) tutorialLabel.text = instruction ?? "";
+        }
+        public void ShowBriefing()
+        {
+            if (dialogueOverlay == null || campaign == null) return;
+            briefingText.text = campaign.ChapterTitle + "\n\n" + campaign.StoryBriefing + "\n\n" + campaign.MissionText();
+            dialogueOverlay.style.display = DisplayStyle.Flex;
+        }
+        private void AdjustLayout(VisualElement root)
+        {
+            if (root.resolvedStyle.width < 200) return;
+            float width = root.resolvedStyle.width;
+            float panelWidth = width < 1100 ? Mathf.Clamp(width * .24f, 195, 270) : 328;
+            var children = root.Children();
+            foreach (var element in children)
+                if (element is ScrollView scroll) scroll.style.width = panelWidth;
+            if (statusBar != null) statusBar.style.fontSize = width < 950 ? 10 : 13;
+        }
+
         public void SelectScreen(int screen)
         {
             ShowTab(screen == 1 ? "missions" : screen == 2 ? "inventory" : "operations");
@@ -360,6 +426,7 @@ namespace NetworkCollapse
             if (operationsTab != null) operationsTab.style.display = tab == "operations" ? DisplayStyle.Flex : DisplayStyle.None;
             if (missionsTab != null) missionsTab.style.display = tab == "missions" ? DisplayStyle.Flex : DisplayStyle.None;
             if (inventoryTab != null) inventoryTab.style.display = tab == "inventory" ? DisplayStyle.Flex : DisplayStyle.None;
+            if (settingsTab != null) settingsTab.style.display = tab == "settings" ? DisplayStyle.Flex : DisplayStyle.None;
         }
 
         public void SetCampaign(NetworkCampaign value)

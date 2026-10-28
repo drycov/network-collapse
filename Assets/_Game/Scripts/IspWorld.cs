@@ -28,8 +28,15 @@ namespace NetworkCollapse
         public int Asn;
         public float OfferMultiplier = 1f;
         public List<Vector2> NetworkSites = new List<Vector2>();
+        public List<RivalLink> NetworkLinks = new List<RivalLink>();
+        public List<RivalTransitContract> TransitContracts = new List<RivalTransitContract>();
+        public List<RivalRoute> OriginRoutes = new List<RivalRoute>();
+        public int TechnicalStaff = 2;
         public bool Acquired;
     }
+    [Serializable] public sealed class RivalLink { public int A, B; public float Capacity = 80f; public bool Failed; }
+    [Serializable] public sealed class RivalTransitContract { public string Provider; public int Asn, Capacity, CostPerTick; public bool Active = true; }
+    [Serializable] public sealed class RivalRoute { public string Prefix, AsPath; public int LocalPreference = 100; }
     [Serializable] public sealed class TransitPartner
     {
         public string Name;
@@ -42,6 +49,9 @@ namespace NetworkCollapse
         public string Name, City;
         public int OriginalAsn, SiteCount, CustomerCount, MaintenancePerTick;
         public int LegacyFaults;
+        public int TechnicalStaff, PendingRepairs;
+        public List<RivalTransitContract> InheritedTransit = new List<RivalTransitContract>();
+        public List<RivalRoute> InheritedRoutes = new List<RivalRoute>();
     }
     [Serializable] public sealed class IspWorld
     {
@@ -100,8 +110,13 @@ namespace NetworkCollapse
                 var city = w.Cities.Find(x => x.Name == rival.City);
                 Vector2 origin = city != null ? city.MapPosition : Vector2.zero;
                 for (int site = 0; site < rival.Assets; site++)
+                {
                     rival.NetworkSites.Add(origin + new Vector2((float)generator.NextDouble() * 4 - 2,
                         (float)generator.NextDouble() * 4 - 2));
+                    if (site > 0) rival.NetworkLinks.Add(new RivalLink { A = site - 1, B = site, Capacity = 80 + site * 20, Failed = site % 3 == 0 });
+                }
+                rival.TransitContracts.Add(new RivalTransitContract { Provider = "Legacy upstream", Asn = 64700 + i, Capacity = 500, CostPerTick = 2 + i });
+                rival.OriginRoutes.Add(new RivalRoute { Prefix = "10." + (40 + i) + ".0.0/16", AsPath = rival.Asn + " " + (64700 + i), LocalPreference = 100 });
             }
             w.Partners.Add(new TransitPartner { Name = "National Transit", Asn = 64521, Cost = 22, Capacity = 1000 });
             w.Partners.Add(new TransitPartner { Name = "Regional IX", Asn = 64522, Cost = 12, Capacity = 500, Peering = true });
@@ -137,6 +152,12 @@ namespace NetworkCollapse
                     Reachable = true
                 });
             }
+            if (Subsidiaries != null) foreach (var subsidiary in Subsidiaries)
+                if (subsidiary.InheritedRoutes != null)
+                    foreach (var route in subsidiary.InheritedRoutes)
+                        Routes.Add(new BgpRoute { DestinationAsn = subsidiary.OriginalAsn,
+                            Prefix = route.Prefix, AsPath = OwnAsn + " " + route.AsPath,
+                            LocalPreference = route.LocalPreference, Reachable = true });
             foreach (var rival in Rivals)
                 if (!rival.Acquired)
                     Routes.Add(new BgpRoute {
@@ -198,7 +219,7 @@ namespace NetworkCollapse
             int offer = Mathf.CeilToInt((rival.Customers * 2 + rival.Assets * 20) * rival.OfferMultiplier);
             if (Reputation < rival.Reputation / 2) return "Недостаточная репутация для сделки";
             if (network.Money < offer) return "Для поглощения потребуется " + offer + " кр.";
-            if (!network.IntegrateRivalSites(rival.NetworkSites, rival.Customers, offer, rival.Name, rival.Asn)) return "Невозможно интегрировать приобретённую сеть: бюджет или лимит узлов";
+            if (!network.IntegrateRivalTopology(rival, offer)) return "Невозможно интегрировать приобретённую сеть: бюджет или лимит узлов";
             rival.Acquired = true;
             CapturedNetworks++;
             if (Subsidiaries == null) Subsidiaries = new List<AcquiredCompany>();
@@ -206,7 +227,10 @@ namespace NetworkCollapse
                 Name = rival.Name, City = rival.City, OriginalAsn = rival.Asn,
                 SiteCount = rival.NetworkSites.Count, CustomerCount = rival.Customers,
                 MaintenancePerTick = Mathf.Max(1, rival.NetworkSites.Count / 2),
-                LegacyFaults = rival.NetworkSites.Count / 3 + (rival.NetworkSites.Count > 1 ? 1 : 0)
+                LegacyFaults = rival.NetworkSites.Count / 3 + (rival.NetworkSites.Count > 1 ? 1 : 0),
+                TechnicalStaff = rival.TechnicalStaff,
+                InheritedTransit = new List<RivalTransitContract>(rival.TransitContracts),
+                InheritedRoutes = new List<RivalRoute>(rival.OriginRoutes)
             });
             var city = Cities.Find(x => x.Name == rival.City);
             if (city != null) { city.Coverage = Mathf.Max(1, city.Coverage); city.Customers += rival.Customers; }
@@ -238,6 +262,10 @@ namespace NetworkCollapse
                 if (tariff != null) Revenue += contract.Subscribers * tariff.MonthlyPrice / 30;
             }
             foreach (var partner in Partners) if (partner.Active) TransitCosts += partner.Cost / 10;
+            if (Subsidiaries != null) foreach (var subsidiary in Subsidiaries)
+                if (subsidiary.InheritedTransit != null)
+                    foreach (var contract in subsidiary.InheritedTransit)
+                        if (contract.Active) TransitCosts += contract.CostPerTick;
             // Abstract billing tick, not real-world billing interval.
             network.CreditNet(Revenue - TransitCosts);
         }

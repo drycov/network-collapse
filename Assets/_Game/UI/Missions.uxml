@@ -1,0 +1,1 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements"><ui:VisualElement name="missions-root"><ui:Label text="МИССИИ" class="nc-title"/><ui:VisualElement name="missions-content"/></ui:VisualElement></ui:UXML>

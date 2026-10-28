@@ -49,7 +49,6 @@ namespace NetworkCollapse
         private bool routesVisible = true;
         private readonly System.Collections.Generic.List<string> events = new System.Collections.Generic.List<string>();
 
-        public event Action<int, int> BuildLinkRequested;
         public event Action<int, int, LinkMedium, int> EngineeredBuildRequested;
         public LinkMedium SelectedMedium { get; private set; } = LinkMedium.Fiber;
         public int SelectedSpeed { get; private set; } = 100;

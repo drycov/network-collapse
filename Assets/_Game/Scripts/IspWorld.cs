@@ -7,6 +7,7 @@ namespace NetworkCollapse
     [Serializable] public sealed class IspCity
     {
         public string Name, Country;
+        public Vector2 MapPosition;
         public int Population, Coverage, Customers;
         public bool Foreign;
     }
@@ -24,6 +25,9 @@ namespace NetworkCollapse
     {
         public string Name, City;
         public int Customers, Assets, Reputation;
+        public int Asn;
+        public float OfferMultiplier = 1f;
+        public List<Vector2> NetworkSites = new List<Vector2>();
         public bool Acquired;
     }
     [Serializable] public sealed class TransitPartner
@@ -45,26 +49,107 @@ namespace NetworkCollapse
         public int OwnAsn = 64512; // Private ASN: fictional routing domain
         public int CapturedNetworks;
         public int ForeignLinks;
+        public int MarketDay;
+        public List<BgpRoute> Routes = new List<BgpRoute>();
+        [Serializable] public sealed class BgpRoute
+        {
+            public int DestinationAsn;
+            public string Prefix;
+            public string AsPath;
+            public int LocalPreference;
+            public bool Reachable;
+        }
+        public string MarketNews = "Операторы готовятся к расширению";
 
         public static IspWorld Create()
         {
             var w = new IspWorld();
-            w.Cities.Add(new IspCity { Name = "Стартовый город", Country = "Страна A", Population = 8000, Coverage = 1, Customers = 12 });
-            w.Cities.Add(new IspCity { Name = "Промышленный город", Country = "Страна A", Population = 16000 });
-            w.Cities.Add(new IspCity { Name = "Региональный центр", Country = "Страна A", Population = 52000 });
-            w.Cities.Add(new IspCity { Name = "Приграничный узел", Country = "Страна B", Population = 34000, Foreign = true });
+            var generator = new System.Random(20261028);
+            string[] countries = { "Республика Альта", "Федерация Норд", "Союз Марис", "Королевство Веста" };
+            string[] cityNames = { "Альта", "Ридж", "Неон", "Нордпорт", "Вектор", "Марис", "Каскад", "Вестон", "Орбита", "Северин", "Портал", "Астра" };
+            for (int i = 0; i < cityNames.Length; i++)
+            {
+                int country = i / 3;
+                w.Cities.Add(new IspCity {
+                    Name = cityNames[i], Country = countries[country],
+                    Foreign = country > 0,
+                    MapPosition = new Vector2(country * 18f + (float)generator.NextDouble() * 10f,
+                        (i % 3) * 9f + (float)generator.NextDouble() * 5f),
+                    Population = 3000 + generator.Next(3000, 70000),
+                    Coverage = i == 0 ? 1 : 0, Customers = i == 0 ? 12 : 0
+                });
+            }
             w.Tariffs.Add(new IspTariff { Name = "Домашний", SpeedMbps = 50, MonthlyPrice = 3 });
             w.Tariffs.Add(new IspTariff { Name = "Скоростной", SpeedMbps = 100, MonthlyPrice = 5 });
             w.Tariffs.Add(new IspTariff { Name = "Бизнес", SpeedMbps = 500, MonthlyPrice = 12 });
-            w.Contracts.Add(new IspContract { City = "Стартовый город", Tariff = "Домашний", Subscribers = 12 });
-            w.Rivals.Add(new RivalOperator { Name = "MetroNet", City = "Промышленный город", Customers = 45, Assets = 2, Reputation = 25 });
-            w.Rivals.Add(new RivalOperator { Name = "FiberUnion", City = "Региональный центр", Customers = 130, Assets = 4, Reputation = 45 });
-            w.Rivals.Add(new RivalOperator { Name = "BorderLink", City = "Приграничный узел", Customers = 250, Assets = 5, Reputation = 55 });
+            w.Contracts.Add(new IspContract { City = "Альта", Tariff = "Домашний", Subscribers = 12 });
+            w.Rivals.Add(new RivalOperator { Name = "MetroNet", City = "Ридж", Customers = 45, Assets = 2, Reputation = 25 });
+            w.Rivals.Add(new RivalOperator { Name = "FiberUnion", City = "Вектор", Customers = 130, Assets = 4, Reputation = 45 });
+            w.Rivals.Add(new RivalOperator { Name = "BorderLink", City = "Марис", Customers = 250, Assets = 5, Reputation = 55 });
+            for (int i = 0; i < w.Rivals.Count; i++)
+            {
+                var rival = w.Rivals[i];
+                rival.Asn = 64600 + i;
+                var city = w.Cities.Find(x => x.Name == rival.City);
+                Vector2 origin = city != null ? city.MapPosition : Vector2.zero;
+                for (int site = 0; site < rival.Assets; site++)
+                    rival.NetworkSites.Add(origin + new Vector2((float)generator.NextDouble() * 4 - 2,
+                        (float)generator.NextDouble() * 4 - 2));
+            }
             w.Partners.Add(new TransitPartner { Name = "National Transit", Asn = 64521, Cost = 22, Capacity = 1000 });
             w.Partners.Add(new TransitPartner { Name = "Regional IX", Asn = 64522, Cost = 12, Capacity = 500, Peering = true });
             w.Partners.Add(new TransitPartner { Name = "International Carrier", Asn = 64523, Cost = 75, Capacity = 10000 });
             return w;
         }
+        public string Negotiate(int index, int percent)
+        {
+            if (index < 0 || index >= Rivals.Count || Rivals[index].Acquired) return "Сделка недоступна";
+            var rival = Rivals[index];
+            // Legal commercial negotiations, not hostile network intrusion.
+            if (percent < 70 || percent > 140) return "Предложение должно составлять 70–140% оценки";
+            float threshold = Mathf.Clamp(1.12f - Reputation * .004f + rival.Reputation * .003f, .8f, 1.3f);
+            if (percent / 100f < threshold)
+            {
+                rival.OfferMultiplier = Mathf.Min(1.4f, rival.OfferMultiplier + .04f);
+                return rival.Name + ": предложение отклонено. Минимальная оценка повышена.";
+            }
+            rival.OfferMultiplier = percent / 100f;
+            return rival.Name + ": предложение принято. Завершите покупку активов.";
+        }
+        public void RebuildBgpRoutes()
+        {
+            Routes.Clear();
+            foreach (var partner in Partners)
+            {
+                if (!partner.Active) continue;
+                Routes.Add(new BgpRoute {
+                    DestinationAsn = partner.Asn,
+                    Prefix = "203.0." + (partner.Asn % 200) + ".0/24",
+                    AsPath = OwnAsn + " " + partner.Asn,
+                    LocalPreference = partner.Peering ? 120 : 100,
+                    Reachable = true
+                });
+            }
+            foreach (var rival in Rivals)
+                if (!rival.Acquired)
+                    Routes.Add(new BgpRoute {
+                        DestinationAsn = rival.Asn,
+                        Prefix = "198.51." + (rival.Asn % 200) + ".0/24",
+                        AsPath = OwnAsn + (Partners.Exists(p => p.Active) ? " " + Partners.Find(p => p.Active).Asn : "") + " " + rival.Asn,
+                        LocalPreference = 80,
+                        Reachable = Partners.Exists(p => p.Active)
+                    });
+        }
+        public string BgpSummary()
+        {
+            RebuildBgpRoutes();
+            var lines = new List<string>();
+            foreach (var route in Routes)
+                lines.Add((route.Reachable ? "BEST" : "DOWN") + " " + route.Prefix +
+                    "  AS_PATH " + route.AsPath + "  LP " + route.LocalPreference);
+            return lines.Count == 0 ? "Нет установленных BGP-соседей" : string.Join("\n", lines);
+        }
+
         public string OpenCity(NetworkSimulation network, int index)
         {
             if (index < 0 || index >= Cities.Count) return "Город не найден";
@@ -103,7 +188,7 @@ namespace NetworkCollapse
             if (index < 0 || index >= Rivals.Count) return "Конкурент не найден";
             var rival = Rivals[index];
             if (rival.Acquired) return "Компания уже приобретена";
-            int offer = rival.Customers * 2 + rival.Assets * 20;
+            int offer = Mathf.CeilToInt((rival.Customers * 2 + rival.Assets * 20) * rival.OfferMultiplier);
             if (Reputation < rival.Reputation / 2) return "Недостаточная репутация для сделки";
             if (network.Money < offer) return "Для поглощения потребуется " + offer + " кр.";
             if (!network.AddContractCustomers(rival.Customers, offer)) return "Недостаточно сетевой ёмкости для миграции клиентов";
@@ -130,7 +215,9 @@ namespace NetworkCollapse
         }
         public void Tick(NetworkSimulation network)
         {
+            MarketDay++;
             Revenue = 0; TransitCosts = 0;
+            if (MarketDay % 5 == 0) SimulateCompetition(network);
             foreach (var contract in Contracts)
             {
                 var tariff = Tariffs.Find(x => x.Name == contract.Tariff);
@@ -140,6 +227,40 @@ namespace NetworkCollapse
             // Abstract billing tick, not real-world billing interval.
             network.CreditNet(Revenue - TransitCosts);
         }
+        private void SimulateCompetition(NetworkSimulation network)
+        {
+            var rng = new System.Random(MarketDay * 7919 + 73);
+            foreach (var rival in Rivals)
+            {
+                if (rival.Acquired) continue;
+                var city = Cities.Find(x => x.Name == rival.City);
+                if (city == null) continue;
+                int gain = 1 + rng.Next(2 + Mathf.Max(1, rival.Reputation / 25));
+                rival.Customers = Mathf.Min(city.Population, rival.Customers + gain);
+                if (city.Coverage > 0 && city.Customers > 1 && network.Availability < .9f)
+                {
+                    int lost = Mathf.Min(city.Customers - 1, 1 + rng.Next(2));
+                    city.Customers -= lost;
+                    rival.Customers += lost;
+                    network.LoseCustomers(lost);
+                    foreach (var contract in Contracts)
+                    {
+                        if (contract.City != city.Name || contract.Subscribers <= 0) continue;
+                        int moved = Mathf.Min(contract.Subscribers, lost);
+                        contract.Subscribers -= moved; lost -= moved;
+                        if (lost <= 0) break;
+                    }
+                    MarketNews = "Конкурент " + rival.Name + " переманил абонентов из " + city.Name;
+                }
+                else MarketNews = rival.Name + " расширил собственную сеть в " + city.Name;
+                if (rival.Customers % 25 < gain)
+                {
+                    rival.Assets++;
+                    rival.NetworkSites.Add(city.MapPosition + new Vector2(rng.Next(-4, 5), rng.Next(-4, 5)));
+                }
+            }
+        }
+
         public string Summary()
         {
             int active = 0;

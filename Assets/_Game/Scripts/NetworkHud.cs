@@ -36,6 +36,9 @@ namespace NetworkCollapse
         public event Action<int> CityExpansionRequested;
         public event Action<int, int> ContractRequested;
         public event Action<int> RivalAcquisitionRequested;
+        public event Action<int, int> RivalNegotiationRequested;
+        private Label worldMapLabel, bgpTableLabel;
+        private VisualElement geographicMap;
         public event Action<int> PartnerConnectionRequested;
         private string activeTab = "operations";
         private int previewMission = -1;
@@ -465,6 +468,47 @@ namespace NetworkCollapse
             marketTab.Clear();
             marketTab.Add(Heading("МИРОВОЙ РЫНОК ISP", 15));
             marketSummary = Body(""); marketTab.Add(marketSummary);
+            marketTab.Add(Heading("ГЕОГРАФИЯ / ГОРОДА", 14));
+            geographicMap = new VisualElement();
+            geographicMap.style.height = 180;
+            geographicMap.style.flexShrink = 0;
+            geographicMap.style.backgroundColor = new Color(.02f, .12f, .16f, 1f);
+            geographicMap.style.borderBottomWidth = 1;
+            geographicMap.style.borderBottomColor = new Color(.15f, .65f, .68f);
+            marketTab.Add(geographicMap);
+            for (int i = 0; i < world.Cities.Count; i++)
+            {
+                var city = world.Cities[i];
+                int index = i;
+                var point = new Button(() => CityExpansionRequested?.Invoke(index)) { text = "●" };
+                point.tooltip = city.Country + " / " + city.Name + " / " + city.Population + " жителей";
+                point.style.position = Position.Absolute;
+                point.style.left = Length.Percent(Mathf.Clamp(city.MapPosition.x / 70f * 100f, 3, 91));
+                point.style.top = Length.Percent(Mathf.Clamp(city.MapPosition.y / 33f * 100f, 5, 85));
+                point.style.width = 21; point.style.height = 21;
+                point.style.fontSize = 15;
+                point.style.paddingLeft = 0; point.style.paddingTop = 0;
+                point.style.backgroundColor = city.Coverage > 0 ? new Color(.06f, .4f, .3f) : new Color(.12f, .22f, .28f);
+                point.style.color = city.Coverage > 0 ? new Color(.52f, 1f, .72f) : new Color(.8f, .87f, .92f);
+                geographicMap.Add(point);
+            }
+            foreach (var rival in world.Rivals)
+            {
+                if (rival.Acquired || rival.NetworkSites == null) continue;
+                foreach (var site in rival.NetworkSites)
+                {
+                    var marker = new Label("◆");
+                    marker.tooltip = rival.Name + " / AS" + rival.Asn;
+                    marker.style.position = Position.Absolute;
+                    marker.style.left = Length.Percent(Mathf.Clamp(site.x / 70f * 100f, 2f, 94f));
+                    marker.style.top = Length.Percent(Mathf.Clamp(site.y / 33f * 100f, 3f, 88f));
+                    marker.style.color = new Color(1f, .45f, .48f);
+                    marker.style.fontSize = 11;
+                    marker.pickingMode = PickingMode.Ignore;
+                    geographicMap.Add(marker);
+                }
+            }
+            worldMapLabel = Body(""); marketTab.Add(worldMapLabel);
             marketTab.Add(Heading("ГОРОДА И ПОКРЫТИЕ", 14));
             for (int i = 0; i < world.Cities.Count; i++)
             {
@@ -483,6 +527,7 @@ namespace NetworkCollapse
             for (int i = 0; i < world.Rivals.Count; i++)
             {
                 int index = i;
+                marketTab.Add(ActionButton("Переговоры: " + world.Rivals[i].Name + " / 120%", () => RivalNegotiationRequested?.Invoke(index, 120)));
                 marketTab.Add(ActionButton("Выкупить " + world.Rivals[i].Name, () => RivalAcquisitionRequested?.Invoke(index)));
             }
             marketTab.Add(Heading("ТРАНЗИТ / ПИРИНГ / BGP", 14));
@@ -492,6 +537,8 @@ namespace NetworkCollapse
                 marketTab.Add(ActionButton(world.Partners[i].Name + " / AS" + world.Partners[i].Asn,
                     () => PartnerConnectionRequested?.Invoke(index)));
             }
+            marketTab.Add(Heading("BGP / RIB", 14));
+            bgpTableLabel = Body(""); marketTab.Add(bgpTableLabel);
             Refresh();
         }
 
@@ -570,7 +617,18 @@ namespace NetworkCollapse
         public void Refresh()
         {
             if (model == null || kpis == null) return;
-            if (world != null && marketSummary != null) marketSummary.text = world.Summary();
+            if (world != null && marketSummary != null)
+            {
+                marketSummary.text = world.Summary() + "\n" + world.MarketNews;
+                if (worldMapLabel != null)
+                {
+                    var regions = new System.Collections.Generic.List<string>();
+                    foreach (var city in world.Cities)
+                        regions.Add(city.Country + " / " + city.Name + " [" + city.MapPosition.x.ToString("0") + "," + city.MapPosition.y.ToString("0") + "] " + (city.Coverage > 0 ? "ONLINE" : "CLOSED"));
+                    worldMapLabel.text = string.Join("\n", regions);
+                }
+                if (bgpTableLabel != null) bgpTableLabel.text = world.BgpSummary();
+            }
             availabilityBar.value = model.Availability * 100f;
             objectiveBar.value = model.ObjectiveTimer <= 0 ? 0 : Mathf.Clamp01(model.ObjectiveProgress / model.ObjectiveTimer) * 100f;
             alertBanner.text = model.GameOver ? "КРИТИЧЕСКАЯ ПОТЕРЯ СВЯЗНОСТИ" : model.FailedNodes + model.FailedLinks > 0 ? "АКТИВНЫЕ АВАРИИ: " + (model.FailedNodes + model.FailedLinks) : "СЕТЬ РАБОТАЕТ ШТАТНО";

@@ -102,13 +102,22 @@ namespace NetworkCollapse
         public void GrantCredits(int amount) { if (amount > 0) Money += amount; }
         public bool SpendCredits(int amount) { if (amount < 0 || Money < amount) return false; Money -= amount; return true; }
         public void CreditNet(int amount) { Money = Mathf.Max(0, Money + amount); }
+        public void LoseCustomers(int count) { Customers = Mathf.Max(0, Customers - Mathf.Max(0, count)); }
         public bool AddContractCustomers(int count, int cost)
         {
             if (count <= 0 || Money < cost || GameOver) return false;
-            var active = Nodes.FindAll(n => n.Tier == EquipmentTier.Access && !n.Failed && n.AdminEnabled && n.Demand + count * .15f <= n.Capacity);
-            if (active.Count == 0) return false;
+            var active = Nodes.FindAll(n => n.Tier == EquipmentTier.Access && !n.Failed && n.AdminEnabled);
+            float requested = count * .15f, spare = 0f;
+            foreach (var node in active) spare += Mathf.Max(0f, node.Capacity - node.Demand);
+            if (spare + .001f < requested) return false;
+            foreach (var node in active)
+            {
+                float allocated = Mathf.Min(requested, Mathf.Max(0f, node.Capacity - node.Demand));
+                node.Demand += allocated;
+                requested -= allocated;
+                if (requested <= .001f) break;
+            }
             Money -= cost; Customers += count;
-            active[random.Next(active.Count)].Demand += count * .15f;
             return true;
         }
         public bool ExpandNetworkFree()

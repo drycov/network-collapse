@@ -149,3 +149,14 @@ The **РЫНОК** HUD tab introduces a fictional city economy and ISP expansion
 World market is saved separately as `NetworkCollapse.World.v1` (Unity PlayerPrefs JSON), restored alongside the physical network, and deleted when creating a new shift. Advancing the game level preserves constructed and expanded infrastructure instead of recreating the starting graph.
 
 Limitations: initial geography and rivals are authored data rather than procedural geopolitical world generation; acquisition is all-or-nothing with no negotiations; no regulatory approval, antitrust, recurring competitive AI, individual customer records, actual BGP protocol, route policy, or executable attack mechanics. Validate in Unity Editor before use.
+
+## Autonomous ISP world simulation (strategic layer)
+
+- A deterministic procedural world seed generates 12 playable cities across four fictitious countries, with map coordinates and population. The **Market** screen includes a clickable positional city overview; this is an abstract strategic map, not a geographical basemap.
+- Competitors have independent ASNs and lists of physical site coordinates. Every fifth economic tick they recruit new subscribers, potentially grow their facilities and can take market share from an operator with poor availability.
+- An acquisition negotiation proposes 120% of the base valuation. Acceptance uses seller reputation and player reputation; failed proposals increase the seller price. After accepted terms, the purchase uses the quoted multiplier. This is a simplified legal M&A mechanic, not an unauthorized takeover.
+- The BGP-inspired route display presents destination prefixes, fictional AS paths, reachability and local preference based on active partner links. It is a **simulation of routing policy metadata**, not a real BGP protocol implementation, packet propagation or RFC-compliant convergence.
+- New market state (map coordinates, competitor sites, proposals and simulation ticks) is serialized by the existing world JSON save. Older saves without these fields may contain empty generated-site lists and require a new shift to generate the complete world.
+- Economic ticks use the existing two-second simulation cadence. This is deliberately accelerated strategy-game time.
+
+**Not yet implemented:** geographic polygon boundaries, rendering independent rival equipment on the main network map, bidding rounds/escrow and regulation, multi-route BGP best-path calculation, routing across simulated international capacity constraints, realistic customer contract billing and churn. Unity Editor compilation and UI playtest remain outstanding.

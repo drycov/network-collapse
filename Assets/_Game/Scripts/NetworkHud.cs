@@ -46,6 +46,10 @@ namespace NetworkCollapse
         private readonly System.Collections.Generic.List<string> events = new System.Collections.Generic.List<string>();
 
         public event Action<int, int> BuildLinkRequested;
+        public event Action<int, int, LinkMedium, int> EngineeredBuildRequested;
+        public LinkMedium SelectedMedium { get; private set; } = LinkMedium.Fiber;
+        public int SelectedSpeed { get; private set; } = 100;
+        private Button mediumButton, speedButton;
         public event Action<int> UpgradeLinkRequested;
         public event Action<int> RepairLinkRequested;
         public event Action<IncidentScenario> IncidentRequested;
@@ -244,7 +248,12 @@ namespace NetworkCollapse
             right.Add(Heading("КАНАЛЫ СВЯЗИ", 15));
             connectionInfo = Body("Выберите узел, затем второй в режиме строительства.");
             right.Add(connectionInfo);
-            build = ActionButton("Построить канал (35)", () => BuildLinkRequested?.Invoke(SelectedId, TargetId));
+            right.Add(Heading("ПРОЕКТ ЛИНИИ / МАТЕРИАЛЫ", 14));
+            mediumButton = ActionButton("Среда: оптика", () => { SelectedMedium = (LinkMedium)(((int)SelectedMedium + 1) % 3); Refresh(); });
+            speedButton = ActionButton("Скорость: 100 Mbps", () => { SelectedSpeed = SelectedSpeed == 10 ? 50 : SelectedSpeed == 50 ? 100 : SelectedSpeed == 100 ? 150 : SelectedSpeed == 150 ? 500 : SelectedSpeed == 500 ? 1000 : 10; Refresh(); });
+            right.Add(mediumButton);
+            right.Add(speedButton);
+            build = ActionButton("Построить канал", () => EngineeredBuildRequested?.Invoke(SelectedId, TargetId, SelectedMedium, SelectedSpeed));
             upgrade = ActionButton("Улучшить канал (25)", () => UpgradeLinkRequested?.Invoke(ActiveLink()));
             repairLink = ActionButton("Ремонт канала (12)", () => RepairLinkRequested?.Invoke(ActiveLink()));
             right.Add(build);
@@ -591,9 +600,11 @@ namespace NetworkCollapse
 
             int index = ActiveLink();
             bool pair = (valid && TargetId >= 0 && TargetId != SelectedId) || SelectedLinkId >= 0;
-            string buildError = valid && TargetId >= 0 ? model.BuildBlockReason(SelectedId, TargetId) : "Выберите два узла";
-            int quote = valid && TargetId >= 0 ? model.GetBuildCost(SelectedId, TargetId) : NetworkSimulation.BuildCost;
-            build.text = "ПРОЛОЖИТЬ ЛИНИЮ (" + quote + " кр.)";
+            string buildError = valid && TargetId >= 0 ? model.BuildBlockReason(SelectedId, TargetId, SelectedMedium, SelectedSpeed) : "Выберите два узла";
+            mediumButton.text = "Среда: " + (SelectedMedium == LinkMedium.Fiber ? "Оптика" : SelectedMedium == LinkMedium.Copper ? "Медь" : "Радиоканал");
+            speedButton.text = "Скорость: " + SelectedSpeed + " Mbps";
+            int quote = valid && TargetId >= 0 ? model.GetBuildCost(SelectedId, TargetId, SelectedMedium, SelectedSpeed) : NetworkSimulation.BuildCost;
+            build.text = "ЗАКАЗАТЬ МОНТАЖ (" + quote + " кр.)";
             build.SetEnabled(valid && TargetId >= 0 && buildError == null);
             upgrade.SetEnabled(!model.GameOver && pair && index >= 0 && !model.Links[index].Failed &&
                                model.Money >= NetworkSimulation.UpgradeCost && model.Links[index].Capacity < 240);
@@ -611,7 +622,7 @@ namespace NetworkCollapse
                 : !pair
                     ? "Включите режим строительства и выберите два узла."
                     : index < 0
-                        ? $"ПРОЕКТ: N{SelectedId:00} → N{TargetId:00}\nДлина: {Vector2.Distance(model.Nodes[SelectedId].Position, model.Nodes[TargetId].Position):0.0} ед.\nСмета: {quote} кр.\nСтатус: {(buildError ?? "Готов к строительству")}"
+                        ? $"ПРОЕКТ: N{SelectedId:00} → N{TargetId:00}\nДлина: {Vector2.Distance(model.Nodes[SelectedId].Position, model.Nodes[TargetId].Position):0.0} ед.\nСмета: {quote} кр.\nПорты: {model.UsedPorts(SelectedId)}/{model.PortLimit(SelectedId)} и {model.UsedPorts(TargetId)}/{model.PortLimit(TargetId)}\nСтатус: {(buildError ?? "Готов к строительству")}"
                         : $"N{SelectedId:00} ↔ N{TargetId:00}: {model.Links[index].Load:0.0}/{model.Links[index].Capacity:0.0}";
 
             if (!valid)

@@ -13,7 +13,7 @@ namespace NetworkCollapse
         private Label kpis, details, title, objectiveLabel, statusBar, alertBanner, footerStatus;
         private VisualElement endingOverlay;
         private Label endingTitle, endingDescription;
-        private ProgressBar availabilityBar, objectiveBar;
+        private ProgressBar availabilityBar, objectiveBar, inspectorLoad;
         private Button pauseButton;
         public event Action PauseRequested;
         private Button repair, failure, build, upgrade, repairLink, nextLevel;
@@ -197,6 +197,8 @@ namespace NetworkCollapse
             right.Add(title);
             details = Body("Выберите узел на карте.");
             right.Add(details);
+            inspectorLoad = MakeProgress("ЗАГРУЗКА ОБЪЕКТА");
+            right.Add(inspectorLoad);
             deviceConfigSection = new VisualElement();
             deviceConfigSection.style.flexShrink = 0;
             right.Add(deviceConfigSection);
@@ -491,6 +493,14 @@ namespace NetworkCollapse
 
             bool valid = SelectedId >= 0 && SelectedId < model.Nodes.Count;
             if (deviceConfigSection != null) deviceConfigSection.style.display = valid ? DisplayStyle.Flex : DisplayStyle.None;
+            bool selectedLinkValid = SelectedLinkId >= 0 && SelectedLinkId < model.Links.Count;
+            if (inspectorLoad != null)
+            {
+                var capacity = selectedLinkValid ? model.Links[SelectedLinkId].Capacity : valid ? model.Nodes[SelectedId].Capacity : 0f;
+                var load = selectedLinkValid ? model.Links[SelectedLinkId].Load : valid ? model.Nodes[SelectedId].Load : 0f;
+                inspectorLoad.value = capacity > 0 ? Mathf.Clamp01(load / capacity) * 100f : 0f;
+                inspectorLoad.style.display = selectedLinkValid || valid ? DisplayStyle.Flex : DisplayStyle.None;
+            }
             vlanField.SetEnabled(valid && !model.GameOver);
             mtuField.SetEnabled(valid && !model.GameOver);
             adminToggle.SetEnabled(valid && !model.GameOver);

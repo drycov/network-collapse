@@ -6,6 +6,8 @@ namespace NetworkCollapse
 {
     public enum NodeStatus { Healthy, Overloaded, Offline, Repairing }
     public enum EquipmentTier { Core, Distribution, Access }
+    public enum DeviceRole { Router, Layer3Switch, Layer2Switch }
+    public enum RoutingMode { Static, OspfSimulated }
     public enum IncidentScenario { None, FiberCut, PowerFailure, Cascade }
 
     [Serializable]
@@ -19,6 +21,14 @@ namespace NetworkCollapse
         public float Load;
         public bool Failed;
         public float RepairRemaining;
+        public string Hostname;
+        public string ManagementIp;
+        public int VlanId;
+        public bool AdminEnabled = true;
+        public DeviceRole Role;
+        public RoutingMode Routing = RoutingMode.Static;
+        public int OspfArea;
+        public int Mtu = 1500;
 
         public NodeStatus Status
         {
@@ -38,6 +48,9 @@ namespace NetworkCollapse
         public float Capacity, Load;
         public bool Failed;
         public bool PlayerBuilt;
+        public string EndpointA;
+        public string EndpointB;
+        public string Prefix;
         public float RepairRemaining;
         /// <summary>Directional flow for visualization: +A	o B, -B	o A.</summary>
         public float FlowAB;
@@ -83,46 +96,87 @@ namespace NetworkCollapse
             Step();
         }
 
+        // Seeded asymmetric, hierarchical network: dual core, distributed aggregation and access spokes.
+        // Addressing uses RFC1918 for management and RFC3021 /31 on simulated routed P2P links.
         private void BuildTopology()
         {
             Nodes.Clear();
             Links.Clear();
-
             int count = 16 + Mathf.Min(Level, 6);
             for (int i = 0; i < count; i++)
             {
-                float angle = i * Mathf.PI * 2f / count;
-                float radius = i % 3 == 0 ? 6.5f : 4.6f;
-                var tier = i == 0 ? EquipmentTier.Core
-                    : i % 3 == 0 ? EquipmentTier.Distribution
-                    : EquipmentTier.Access;
+                EquipmentTier tier = i < 2 ? EquipmentTier.Core :
+                    i < 7 ? EquipmentTier.Distribution : EquipmentTier.Access;
+                float x, y;
+                if (i == 0) { x = -3.2f; y = 4.6f; }
+                else if (i == 1) { x = 3.5f; y = 4.1f; }
+                else if (i < 7)
+                {
+                    x = -6.2f + (i - 2) * 3.1f + RandomRange(-.55f, .55f);
+                    y = 1.0f + RandomRange(-.9f, .6f);
+                }
+                else
+                {
+                    int group = (i - 7) % 5;
+                    int row = (i - 7) / 5;
+                    x = -6.5f + group * 3.15f + RandomRange(-.9f, .8f);
+                    y = -2.0f - row * 2.0f + RandomRange(-.85f, .65f);
+                }
+                var role = tier == EquipmentTier.Core ? DeviceRole.Router :
+                    tier == EquipmentTier.Distribution ? DeviceRole.Layer3Switch : DeviceRole.Layer2Switch;
                 Nodes.Add(new NetworkNode
                 {
-                    Id = i,
-                    Tier = tier,
-                    Position = new Vector2(Mathf.Cos(angle) * radius, Mathf.Sin(angle) * radius),
-                    Demand = i == 0 ? 0 : 4 + random.Next(8 + Level * 2),
-                    Capacity = tier == EquipmentTier.Core ? 280 + Level * 15
-                        : tier == EquipmentTier.Distribution ? 100 + Level * 8
-                        : 32 + Level * 2
+                    Id = i, Tier = tier, Role = role,
+                    Hostname = (tier == EquipmentTier.Core ? "cr" : tier == EquipmentTier.Distribution ? "ds" : "as") + "-" + i.ToString("00"),
+                    ManagementIp = "10.200." + (i / 254) + "." + (i % 254 + 1),
+                    VlanId = tier == EquipmentTier.Access ? 100 + ((i - 7) % 5) * 10 : 1,
+                    Routing = role == DeviceRole.Layer2Switch ? RoutingMode.Static : RoutingMode.OspfSimulated,
+                    Position = new Vector2(x, y),
+                    Demand = tier == EquipmentTier.Core ? 0 : 4 + random.Next(8 + Level * 2),
+                    Capacity = tier == EquipmentTier.Core ? 350 : tier == EquipmentTier.Distribution ? 140 : 45
                 });
             }
-
-            for (int i = 0; i < Nodes.Count; i++)
-                AddLink(i, (i + 1) % Nodes.Count, 42 + Level * 2, false);
-
-            int chords = 7 + Level / 2;
-            for (int i = 0; i < chords; i++)
+            AddLink(0, 1, 180, false);
+            for (int i = 2; i < Nodes.Count; i++)
             {
-                int a = i % Nodes.Count;
-                int b = (i + Nodes.Count / 2 + (i % 3)) % Nodes.Count;
-                if (a != b && FindLink(a, b) < 0)
-                    AddLink(a, b, 58 + Level * 3, false);
+                if (i < 7)
+                {
+                    AddLink(i, (i % 2), 100, false);
+                    if (i % 2 == 0) AddLink(i, 1, 70, false);
+                }
+                else
+                {
+                    int parent = 2 + (i - 7) % 5;
+                    AddLink(i, parent, 45, false);
+                    if ((i - 7) % 4 == 0)
+                        AddLink(i, 2 + ((parent - 1) % 5), 35, false);
+                }
             }
+            // A few unequal cross-connects create loops and diverse restoration routes.
+            for (int i = 2; i < 6; i++)
+                if (random.NextDouble() < .72) AddLink(i, i + 1, 60, false);
+        }
+
+        private float RandomRange(float low, float high) => low + (float)random.NextDouble() * (high - low);
+
+        public bool ConfigureNode(int id, int vlan, int mtu, bool enabled, RoutingMode routing)
+        {
+            if (id < 0 || id >= Nodes.Count || vlan < 1 || vlan > 4094 ||
+                mtu < 576 || mtu > 9216) return false;
+            var node = Nodes[id];
+            node.VlanId = vlan;
+            node.Mtu = mtu;
+            node.AdminEnabled = enabled;
+            node.Routing = node.Role == DeviceRole.Layer2Switch ? RoutingMode.Static : routing;
+            Step();
+            return true;
         }
 
         private void AddLink(int a, int b, float capacity, bool built) =>
-            Links.Add(new NetworkLink { A = a, B = b, Capacity = capacity, PlayerBuilt = built });
+            Links.Add(new NetworkLink { A = a, B = b, Capacity = capacity, PlayerBuilt = built,
+                Prefix = "10.254." + (Links.Count / 128) + "." + ((Links.Count % 128) * 2) + "/31",
+                EndpointA = "10.254." + (Links.Count / 128) + "." + ((Links.Count % 128) * 2),
+                EndpointB = "10.254." + (Links.Count / 128) + "." + ((Links.Count % 128) * 2 + 1) });
 
         public int FindLink(int a, int b) =>
             Links.FindIndex(l => (l.A == a && l.B == b) || (l.A == b && l.B == a));
@@ -205,7 +259,7 @@ namespace NetworkCollapse
             {
                 var sender = Nodes[source];
                 requested += sender.Demand;
-                if (sender.Failed || Nodes[0].Failed) continue;
+                if (sender.Failed || !sender.AdminEnabled || Nodes[0].Failed || !Nodes[0].AdminEnabled) continue;
 
                 var path = FindOptimalPath(source, 0, sender.Demand);
                 if (path == null || path.Count == 0) continue;
@@ -284,7 +338,7 @@ namespace NetworkCollapse
         public List<int> FindOptimalPath(int start, int goal, float demand)
         {
             if (start < 0 || goal < 0 || start >= Nodes.Count || goal >= Nodes.Count ||
-                Nodes[start].Failed || Nodes[goal].Failed || demand <= 0f) return null;
+                Nodes[start].Failed || Nodes[goal].Failed || !Nodes[start].AdminEnabled || !Nodes[goal].AdminEnabled || demand <= 0f) return null;
             if (start == goal) return new List<int>();
             int count = Nodes.Count;
             var distance = new float[count];
@@ -306,7 +360,7 @@ namespace NetworkCollapse
                     var link = Links[i];
                     if (link.Failed || link.Capacity <= 0f || link.Capacity - link.Load + 0.0001f < demand) continue;
                     int next = link.A == current ? link.B : link.B == current ? link.A : -1;
-                    if (next < 0 || visited[next] || Nodes[next].Failed) continue;
+                    if (next < 0 || visited[next] || Nodes[next].Failed || !Nodes[next].AdminEnabled) continue;
                     float utilization = Mathf.Clamp01((link.Load + demand) / link.Capacity);
                     float length = Vector2.Distance(Nodes[current].Position, Nodes[next].Position);
                     float cost = 1f + 3f * utilization * utilization + .015f * length;

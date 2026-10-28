@@ -26,6 +26,9 @@ namespace NetworkCollapse
         private Button repair, failure, build, upgrade, repairLink, nextLevel;
         private Label connectionInfo, eventLog, missionLabel, storyLabel, achievementLabel, inventoryLabel, boardLabel, incidentLabel, dialogueLabel;
         public event Action<int> UpgradeDeviceRequested;
+        public event Action ExpandNetworkRequested;
+        public event Action AcquireCustomersRequested;
+        public event Action<int> DiagnoseRequested;
         private VisualElement operationsTab, missionsTab, inventoryTab, deviceConfigSection;
         private string activeTab = "operations";
         private int previewMission = -1;
@@ -165,6 +168,9 @@ namespace NetworkCollapse
                 tab.style.flexGrow = 0;
                 tab.style.minHeight = StyleKeyword.Auto;
             }
+            operationsTab.Add(Heading("РАЗВИТИЕ ISP", 15));
+            operationsTab.Add(ActionButton("Открыть новый район / построить узел", () => ExpandNetworkRequested?.Invoke()));
+            operationsTab.Add(ActionButton("Рекламная кампания / привлечь клиентов (20)", () => AcquireCustomersRequested?.Invoke()));
             operationsTab.Add(Heading("УПРАВЛЕНИЕ", 15));
             modeButton = ActionButton("Режим строительства: выкл.", () => { BuildMode = !BuildMode; BuildModeChanged?.Invoke(BuildMode); Refresh(); });
             operationsTab.Add(modeButton);
@@ -229,6 +235,7 @@ namespace NetworkCollapse
             deviceConfigSection = new VisualElement();
             deviceConfigSection.style.flexShrink = 0;
             right.Add(deviceConfigSection);
+            deviceConfigSection.Add(ActionButton("ДИАГНОСТИКА НЕИСПРАВНОСТЕЙ", () => DiagnoseRequested?.Invoke(SelectedId)));
             deviceConfigSection.Add(Heading("КОНФИГУРАЦИЯ УСТРОЙСТВА", 14));
             vlanField = new IntegerField("VLAN ID");
             mtuField = new IntegerField("MTU");

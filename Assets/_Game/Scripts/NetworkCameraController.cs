@@ -53,6 +53,25 @@ namespace NetworkCollapse
             return new Vector3(world.x, world.y, 0);
         }
 
+        public void FrameNetwork(NetworkSimulation simulation)
+        {
+            if (cam == null) cam = GetComponent<Camera>();
+            if (cam == null || simulation == null || simulation.Nodes.Count == 0) return;
+            Vector2 min = simulation.Nodes[0].Position;
+            Vector2 max = min;
+            foreach (var node in simulation.Nodes)
+            {
+                min = Vector2.Min(min, node.Position);
+                max = Vector2.Max(max, node.Position);
+            }
+            Vector2 center = (min + max) * .5f;
+            transform.position = new Vector3(center.x, center.y, -20f);
+            float visibleAspect = Mathf.Max(.5f, cam.aspect);
+            cam.orthographicSize = Mathf.Clamp(
+                Mathf.Max((max.y - min.y) * .63f + 2f, (max.x - min.x) / visibleAspect * .68f + 2f),
+                5f, 55f);
+        }
+
         public void ResetView()
         {
             if (cam == null) cam = GetComponent<Camera>();

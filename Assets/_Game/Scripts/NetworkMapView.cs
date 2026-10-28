@@ -25,6 +25,7 @@ namespace NetworkCollapse
         private int secondSelected = -1;
         private int selectedLink = -1;
         private float clock;
+        private readonly List<LineRenderer> backgroundGrid = new List<LineRenderer>();
         private EquipmentTier? visibleTier;
         private readonly HashSet<int> routeLinks = new HashSet<int>();
         private readonly HashSet<int> backupRouteLinks = new HashSet<int>();
@@ -93,6 +94,7 @@ namespace NetworkCollapse
             var shader = Shader.Find("Sprites/Default");
             if (shader == null) shader = Shader.Find("Universal Render Pipeline/Unlit");
             lineMaterial = new Material(shader);
+            BuildTerminalGrid();
 
             for (int i = 0; i < model.Links.Count; i++)
                 AddLinkVisual(i);
@@ -259,6 +261,32 @@ namespace NetworkCollapse
             }
         }
 
+        private void BuildTerminalGrid()
+        {
+            for (int coordinate = -14; coordinate <= 14; coordinate += 2)
+            {
+                AddGridLine(new Vector3(coordinate, -11, 0), new Vector3(coordinate, 11, 0), coordinate == 0);
+                AddGridLine(new Vector3(-15, coordinate, 0), new Vector3(15, coordinate, 0), coordinate == 0);
+            }
+        }
+
+        private void AddGridLine(Vector3 a, Vector3 b, bool axis)
+        {
+            var obj = new GameObject(axis ? "Radar Axis" : "Radar Grid");
+            obj.transform.SetParent(transform, false);
+            var line = obj.AddComponent<LineRenderer>();
+            line.useWorldSpace = true;
+            line.positionCount = 2;
+            line.SetPosition(0, a);
+            line.SetPosition(1, b);
+            line.material = lineMaterial;
+            line.sortingOrder = -10;
+            line.startWidth = line.endWidth = axis ? .018f : .008f;
+            Color color = axis ? new Color(.12f, .35f, .37f, .45f) : new Color(.065f, .22f, .24f, .26f);
+            line.startColor = line.endColor = color;
+            backgroundGrid.Add(line);
+        }
+
         private void AddLinkVisual(int index)
         {
             var link = simulation.Links[index];
@@ -338,6 +366,7 @@ namespace NetworkCollapse
         {
             foreach (Transform child in transform) Destroy(child.gameObject);
             nodeViews.Clear();
+            backgroundGrid.Clear();
             linkViews.Clear();
             particles.Clear();
             particleLinks.Clear();

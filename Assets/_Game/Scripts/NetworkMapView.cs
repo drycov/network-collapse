@@ -11,6 +11,7 @@ namespace NetworkCollapse
             public SpriteRenderer Sprite;
             public SpriteRenderer Halo;
             public SpriteRenderer RepairRing;
+            public DeviceRole Role;
         }
 
         private readonly List<NodeView> nodeViews = new List<NodeView>();
@@ -19,7 +20,11 @@ namespace NetworkCollapse
         private readonly List<int> particleLinks = new List<int>();
 
         private NetworkSimulation simulation;
-        private Sprite sprite;
+        private Sprite packetSprite;
+        private Sprite haloSprite;
+        private Sprite routerSprite;
+        private Sprite switchSprite;
+        private Sprite accessSprite;
         private Material lineMaterial;
         private int selected = -1;
         private int secondSelected = -1;
@@ -31,7 +36,10 @@ namespace NetworkCollapse
         private readonly HashSet<int> backupRouteLinks = new HashSet<int>();
         private int routeSource = -1;
         public bool ShowRoutes { get; private set; } = true;
+        private LineRenderer previewLine;
+
         public void SetRouteVisibility(bool enabled) { ShowRoutes = enabled; Refresh(); }
+
         public void HighlightRoute(int source)
         {
             routeSource = source;
@@ -48,7 +56,7 @@ namespace NetworkCollapse
             }
             Refresh();
         }
-        private LineRenderer previewLine;
+
         public void SetBuildPreview(int source, Vector3 world, int target = -1)
         {
             if (previewLine == null && simulation != null)
@@ -74,6 +82,7 @@ namespace NetworkCollapse
             Color color = allowed ? new Color(.3f, 1f, .67f, .85f) : new Color(1f, .32f, .27f, .85f);
             previewLine.startColor = previewLine.endColor = color;
         }
+
         public void SetTierFilter(EquipmentTier? tier) { visibleTier = tier; Refresh(); }
 
         public int SelectedNode => selected;
@@ -84,12 +93,11 @@ namespace NetworkCollapse
             ClearMap();
             simulation = model;
 
-            var texture = new Texture2D(32, 32, TextureFormat.RGBA32, false);
-            for (int y = 0; y < 32; y++)
-                for (int x = 0; x < 32; x++)
-                    texture.SetPixel(x, y, (new Vector2(x - 15.5f, y - 15.5f).sqrMagnitude < 210f) ? Color.white : Color.clear);
-            texture.Apply();
-            sprite = Sprite.Create(texture, new Rect(0, 0, 32, 32), new Vector2(.5f, .5f), 32);
+            routerSprite = NetworkIconFactory.Create(DeviceRole.Router);
+            switchSprite = NetworkIconFactory.Create(DeviceRole.Layer3Switch);
+            accessSprite = NetworkIconFactory.Create(DeviceRole.Layer2Switch);
+            haloSprite = NetworkIconFactory.CreateHalo();
+            packetSprite = accessSprite;
 
             var shader = Shader.Find("Sprites/Default");
             if (shader == null) shader = Shader.Find("Universal Render Pipeline/Unlit");
@@ -101,33 +109,39 @@ namespace NetworkCollapse
 
             foreach (var node in model.Nodes)
             {
-                var root = new GameObject("Device N" + node.Id).transform;
+                var root = new GameObject(node.Hostname ?? ("Device N" + node.Id)).transform;
                 root.SetParent(transform, false);
                 root.position = node.Position;
 
                 var halo = new GameObject("Selection").AddComponent<SpriteRenderer>();
                 halo.transform.SetParent(root, false);
-                halo.sprite = sprite;
-                halo.transform.localScale = Vector3.one * .92f;
-                halo.color = new Color(.38f, .8f, 1f, .3f);
+                halo.sprite = haloSprite;
+                halo.transform.localScale = Vector3.one * 1.15f;
+                halo.color = new Color(.38f, .8f, 1f, .35f);
                 halo.sortingOrder = 2;
 
                 var repair = new GameObject("Repair").AddComponent<SpriteRenderer>();
                 repair.transform.SetParent(root, false);
-                repair.sprite = sprite;
-                repair.transform.localScale = Vector3.one * .78f;
-                repair.color = new Color(1f, .82f, .18f, .4f);
+                repair.sprite = haloSprite;
+                repair.transform.localScale = Vector3.one * .95f;
+                repair.color = new Color(1f, .82f, .18f, .45f);
                 repair.sortingOrder = 1;
                 repair.enabled = false;
 
                 var renderer = new GameObject("Device").AddComponent<SpriteRenderer>();
                 renderer.transform.SetParent(root, false);
-                renderer.sprite = sprite;
-                renderer.transform.localScale = Vector3.one * .53f;
+                renderer.sprite = SpriteFor(node.Role);
+                renderer.transform.localScale = Vector3.one * .72f;
                 renderer.sortingOrder = 3;
 
-                AddEquipmentGlyph(root, node.Role);
-                nodeViews.Add(new NodeView { Root = root, Sprite = renderer, Halo = halo, RepairRing = repair });
+                nodeViews.Add(new NodeView
+                {
+                    Root = root,
+                    Sprite = renderer,
+                    Halo = halo,
+                    RepairRing = repair,
+                    Role = node.Role
+                });
             }
 
             selected = -1;
@@ -138,6 +152,13 @@ namespace NetworkCollapse
             routeSource = -1;
             previewLine = null;
             Refresh();
+        }
+
+        private Sprite SpriteFor(DeviceRole role)
+        {
+            if (role == DeviceRole.Router) return routerSprite;
+            if (role == DeviceRole.Layer3Switch) return switchSprite;
+            return accessSprite;
         }
 
         public void SetSelected(int index)
@@ -163,11 +184,12 @@ namespace NetworkCollapse
             Refresh();
         }
 
-        public int HitTest(Vector3 world, float threshold = .45f)
+        public int HitTest(Vector3 world, float threshold = .5f)
         {
             if (simulation == null) return -1;
             for (int i = 0; i < simulation.Nodes.Count; i++)
-                if ((!visibleTier.HasValue || simulation.Nodes[i].Tier == visibleTier.Value) && Vector2.Distance(simulation.Nodes[i].Position, new Vector2(world.x, world.y)) < threshold)
+                if ((!visibleTier.HasValue || simulation.Nodes[i].Tier == visibleTier.Value) &&
+                    Vector2.Distance(simulation.Nodes[i].Position, new Vector2(world.x, world.y)) < threshold)
                     return i;
             return -1;
         }
@@ -183,11 +205,7 @@ namespace NetworkCollapse
                 Vector2 a = simulation.Nodes[link.A].Position;
                 Vector2 b = simulation.Nodes[link.B].Position;
                 float d = DistanceToSegment(new Vector2(world.x, world.y), a, b);
-                if (d < best)
-                {
-                    best = d;
-                    bestIdx = i;
-                }
+                if (d < best) { best = d; bestIdx = i; }
             }
             return bestIdx;
         }
@@ -214,22 +232,23 @@ namespace NetworkCollapse
                 else if (node.Status == NodeStatus.Overloaded)
                     c = new Color(1f, .57f, .2f);
                 else if (node.Tier == EquipmentTier.Core)
-                    c = new Color(1f, .79f, .3f);
+                    c = new Color(1f, .84f, .28f);
                 else if (node.Tier == EquipmentTier.Distribution)
-                    c = new Color(.3f, .61f, 1f);
+                    c = new Color(.35f, .65f, 1f);
                 else
-                    c = new Color(.21f, .88f, .73f);
+                    c = new Color(.25f, .92f, .72f);
 
                 bool visible = !visibleTier.HasValue || node.Tier == visibleTier.Value;
+                nodeViews[i].Sprite.sprite = SpriteFor(node.Role);
                 nodeViews[i].Sprite.color = c;
                 nodeViews[i].Root.gameObject.SetActive(visible);
                 nodeViews[i].Halo.enabled = i == selected || i == secondSelected;
                 nodeViews[i].Halo.color = i == secondSelected
-                    ? new Color(1f, .75f, .19f, .5f)
-                    : new Color(.38f, .8f, 1f, .3f);
-                nodeViews[i].Root.localScale = node.Tier == EquipmentTier.Core ? Vector3.one * 1.55f
-                    : node.Tier == EquipmentTier.Distribution ? Vector3.one * 1.22f
-                    : Vector3.one;
+                    ? new Color(1f, .75f, .19f, .55f)
+                    : new Color(.38f, .8f, 1f, .4f);
+                float scale = node.Tier == EquipmentTier.Core ? 1.65f
+                    : node.Tier == EquipmentTier.Distribution ? 1.28f : 1.05f;
+                nodeViews[i].Root.localScale = Vector3.one * scale;
 
                 bool repairing = node.Failed && node.RepairRemaining > 0f;
                 nodeViews[i].RepairRing.enabled = repairing;
@@ -262,45 +281,6 @@ namespace NetworkCollapse
             }
         }
 
-        // Original procedural network glyphs: routing arrows and switching port symbols.
-        // Rendered in local space so tier scaling and selection work automatically.
-        private void AddEquipmentGlyph(Transform root, DeviceRole role)
-        {
-            Color ink = new Color(.025f, .08f, .11f);
-            if (role == DeviceRole.Router)
-            {
-                GlyphStroke(root, new Vector2(-.16f, 0), new Vector2(.16f, 0), ink);
-                GlyphStroke(root, new Vector2(.09f, .085f), new Vector2(.17f, 0), ink);
-                GlyphStroke(root, new Vector2(.09f, -.085f), new Vector2(.17f, 0), ink);
-                GlyphStroke(root, new Vector2(0, -.15f), new Vector2(0, .15f), ink);
-                GlyphStroke(root, new Vector2(-.07f, .08f), new Vector2(0, .16f), ink);
-            }
-            else
-            {
-                GlyphStroke(root, new Vector2(-.17f, .09f), new Vector2(.17f, .09f), ink);
-                GlyphStroke(root, new Vector2(-.17f, -.09f), new Vector2(.17f, -.09f), ink);
-                for (int i = -1; i <= 1; i++)
-                    GlyphStroke(root, new Vector2(i * .12f, -.15f), new Vector2(i * .12f, .15f), ink);
-                if (role == DeviceRole.Layer3Switch)
-                    GlyphStroke(root, new Vector2(-.18f, -.18f), new Vector2(.18f, .18f), ink);
-            }
-        }
-
-        private void GlyphStroke(Transform root, Vector2 a, Vector2 b, Color color)
-        {
-            var obj = new GameObject("Network Symbol Stroke");
-            obj.transform.SetParent(root, false);
-            var line = obj.AddComponent<LineRenderer>();
-            line.useWorldSpace = false;
-            line.positionCount = 2;
-            line.SetPosition(0, new Vector3(a.x, a.y, -.1f));
-            line.SetPosition(1, new Vector3(b.x, b.y, -.1f));
-            line.material = lineMaterial;
-            line.sortingOrder = 5;
-            line.startWidth = line.endWidth = .032f;
-            line.startColor = line.endColor = color;
-        }
-
         private void BuildTerminalGrid()
         {
             for (int coordinate = -14; coordinate <= 14; coordinate += 2)
@@ -322,7 +302,7 @@ namespace NetworkCollapse
             line.material = lineMaterial;
             line.sortingOrder = -10;
             line.startWidth = line.endWidth = axis ? .018f : .008f;
-            Color color = axis ? new Color(.12f, .35f, .37f, .45f) : new Color(.065f, .22f, .24f, .26f);
+            Color color = axis ? new Color(.12f, .35f, .37f, .55f) : new Color(.065f, .22f, .24f, .35f);
             line.startColor = line.endColor = color;
             backgroundGrid.Add(line);
         }
@@ -347,10 +327,10 @@ namespace NetworkCollapse
                 var packet = new GameObject("Traffic packet").transform;
                 packet.SetParent(transform, false);
                 var sr = packet.gameObject.AddComponent<SpriteRenderer>();
-                sr.sprite = sprite;
+                sr.sprite = packetSprite;
                 sr.color = new Color(.4f, .96f, 1f);
                 sr.sortingOrder = 2;
-                packet.localScale = Vector3.one * .11f;
+                packet.localScale = Vector3.one * .14f;
                 particles.Add(packet);
                 particleLinks.Add(index);
             }
@@ -365,7 +345,7 @@ namespace NetworkCollapse
             {
                 if (nodeViews[i].RepairRing != null && nodeViews[i].RepairRing.enabled)
                 {
-                    float pulse = 0.72f + 0.14f * Mathf.Sin(clock * 5.5f);
+                    float pulse = 0.9f + 0.12f * Mathf.Sin(clock * 5.5f);
                     nodeViews[i].RepairRing.transform.localScale = Vector3.one * pulse;
                 }
             }
@@ -388,7 +368,6 @@ namespace NetworkCollapse
                 particles[i].gameObject.SetActive(active);
                 if (!active) continue;
 
-                // Direction from FlowAB
                 bool forward = link.FlowAB >= 0f;
                 float speed = .16f + .2f * Mathf.Clamp01(link.Load / Mathf.Max(1f, link.Capacity));
                 float phase = (i % 2) * .5f;
@@ -397,7 +376,6 @@ namespace NetworkCollapse
                 Vector3 from = simulation.Nodes[link.A].Position;
                 Vector3 to = simulation.Nodes[link.B].Position;
                 if (!forward) (from, to) = (to, from);
-
                 particles[i].position = Vector3.Lerp(from, to, t);
             }
         }
@@ -411,12 +389,19 @@ namespace NetworkCollapse
             particles.Clear();
             particleLinks.Clear();
             if (lineMaterial != null) Destroy(lineMaterial);
-            if (sprite != null)
-            {
-                var texture = sprite.texture;
-                Destroy(sprite);
-                Destroy(texture);
-            }
+            DestroySprite(routerSprite);
+            DestroySprite(switchSprite);
+            DestroySprite(accessSprite);
+            DestroySprite(haloSprite);
+            routerSprite = switchSprite = accessSprite = haloSprite = packetSprite = null;
+        }
+
+        private static void DestroySprite(Sprite s)
+        {
+            if (s == null) return;
+            var t = s.texture;
+            Object.Destroy(s);
+            if (t != null) Object.Destroy(t);
         }
 
         private void OnDestroy() { ClearMap(); }

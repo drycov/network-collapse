@@ -30,7 +30,13 @@ namespace NetworkCollapse
         public event Action AcquireCustomersRequested;
         public event Action<int> DiagnoseRequested;
         public event Action ScanNetworkRequested;
-        private VisualElement operationsTab, missionsTab, inventoryTab, deviceConfigSection;
+        private VisualElement operationsTab, missionsTab, inventoryTab, deviceConfigSection, marketTab;
+        private Label marketSummary;
+        private IspWorld world;
+        public event Action<int> CityExpansionRequested;
+        public event Action<int, int> ContractRequested;
+        public event Action<int> RivalAcquisitionRequested;
+        public event Action<int> PartnerConnectionRequested;
         private string activeTab = "operations";
         private int previewMission = -1;
         private VisualElement missionPicker;
@@ -139,6 +145,7 @@ namespace NetworkCollapse
             nav.Add(TabButton("СЕТЬ", () => ShowTab("operations")));
             nav.Add(TabButton("МИССИИ", () => ShowTab("missions")));
             nav.Add(TabButton("СКЛАД", () => ShowTab("inventory")));
+            nav.Add(TabButton("РЫНОК", () => ShowTab("market")));
             nav.Add(TabButton("НАСТР.", () => ShowTab("settings")));
             left.Add(nav);
             nav.style.marginTop = 12;
@@ -149,6 +156,10 @@ namespace NetworkCollapse
             left.Add(operationsTab);
             left.Add(missionsTab);
             left.Add(inventoryTab);
+            marketTab = new VisualElement(); left.Add(marketTab);
+            marketTab.style.flexShrink = 0;
+            marketTab.Add(Heading("МИРОВОЙ РЫНОК ISP", 15));
+            marketSummary = Body(""); marketTab.Add(marketSummary);
             settingsTab = new VisualElement(); left.Add(settingsTab);
             settingsTab.style.flexShrink = 0;
             settingsTab.Add(Heading("АУДИО", 15));
@@ -444,6 +455,44 @@ namespace NetworkCollapse
             if (missionsTab != null) missionsTab.style.display = tab == "missions" ? DisplayStyle.Flex : DisplayStyle.None;
             if (inventoryTab != null) inventoryTab.style.display = tab == "inventory" ? DisplayStyle.Flex : DisplayStyle.None;
             if (settingsTab != null) settingsTab.style.display = tab == "settings" ? DisplayStyle.Flex : DisplayStyle.None;
+            if (marketTab != null) marketTab.style.display = tab == "market" ? DisplayStyle.Flex : DisplayStyle.None;
+        }
+
+        public void SetWorld(IspWorld value)
+        {
+            world = value;
+            if (marketTab == null || world == null) return;
+            marketTab.Clear();
+            marketTab.Add(Heading("МИРОВОЙ РЫНОК ISP", 15));
+            marketSummary = Body(""); marketTab.Add(marketSummary);
+            marketTab.Add(Heading("ГОРОДА И ПОКРЫТИЕ", 14));
+            for (int i = 0; i < world.Cities.Count; i++)
+            {
+                int index = i;
+                marketTab.Add(ActionButton(world.Cities[i].Name + " / открыть", () => CityExpansionRequested?.Invoke(index)));
+            }
+            marketTab.Add(Heading("ДОГОВОРЫ И ТАРИФЫ", 14));
+            for (int i = 0; i < world.Cities.Count; i++)
+                for (int j = 0; j < world.Tariffs.Count; j++)
+                {
+                    int city = i, tariff = j;
+                    marketTab.Add(ActionButton(world.Cities[i].Name + " · " + world.Tariffs[j].Name,
+                        () => ContractRequested?.Invoke(city, tariff)));
+                }
+            marketTab.Add(Heading("СЕТИ КОНКУРЕНТОВ / ПОГЛОЩЕНИЯ", 14));
+            for (int i = 0; i < world.Rivals.Count; i++)
+            {
+                int index = i;
+                marketTab.Add(ActionButton("Выкупить " + world.Rivals[i].Name, () => RivalAcquisitionRequested?.Invoke(index)));
+            }
+            marketTab.Add(Heading("ТРАНЗИТ / ПИРИНГ / BGP", 14));
+            for (int i = 0; i < world.Partners.Count; i++)
+            {
+                int index = i;
+                marketTab.Add(ActionButton(world.Partners[i].Name + " / AS" + world.Partners[i].Asn,
+                    () => PartnerConnectionRequested?.Invoke(index)));
+            }
+            Refresh();
         }
 
         public void SetCampaign(NetworkCampaign value)
@@ -521,6 +570,7 @@ namespace NetworkCollapse
         public void Refresh()
         {
             if (model == null || kpis == null) return;
+            if (world != null && marketSummary != null) marketSummary.text = world.Summary();
             availabilityBar.value = model.Availability * 100f;
             objectiveBar.value = model.ObjectiveTimer <= 0 ? 0 : Mathf.Clamp01(model.ObjectiveProgress / model.ObjectiveTimer) * 100f;
             alertBanner.text = model.GameOver ? "КРИТИЧЕСКАЯ ПОТЕРЯ СВЯЗНОСТИ" : model.FailedNodes + model.FailedLinks > 0 ? "АКТИВНЫЕ АВАРИИ: " + (model.FailedNodes + model.FailedLinks) : "СЕТЬ РАБОТАЕТ ШТАТНО";

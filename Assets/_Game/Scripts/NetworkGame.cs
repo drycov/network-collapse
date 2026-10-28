@@ -111,6 +111,12 @@ namespace NetworkCollapse
             };
             hud.NextLevelRequested += OnNextLevel;
             hud.PauseRequested += TogglePause;
+            hud.VolumeChanged += value => audio.SetVolume(value);
+            hud.MuteChanged += value => audio.SetMuted(value);
+            hud.PerformanceModeChanged += low => { Application.targetFrameRate = low ? 30 : 60; QualitySettings.vSyncCount = low ? 0 : 1; };
+            audio.SetVolume(PlayerPrefs.GetFloat("NC.Volume", .48f));
+            audio.SetMuted(PlayerPrefs.GetInt("NC.Muted", 0) != 0);
+            Application.targetFrameRate = PlayerPrefs.GetInt("NC.LowGraphics", 0) != 0 ? 30 : 60;
             hud.UpgradeDeviceRequested += id => { if (simulation.UpgradeDevice(id)) { hud.AddEvent("Оборудование модернизировано: N" + id); audio.Play(SoundCue.Confirm); Refresh(); } };
             hud.UseInventoryRequested += id =>
             {
@@ -172,6 +178,7 @@ namespace NetworkCollapse
             hud.Select(-1);
             hud.SetPaused(false);
             hud.SetTutorial(firstRunTutorial ? "ОБУЧЕНИЕ 1/3: Выберите любой узел сети на карте." : "");
+            if (firstRunTutorial) hud.ShowBriefing();
             hud.AddEvent("Диспетчерская запущена · " + campaign.ChapterTitle);
             hud.AddEvent(campaign.StoryBriefing);
             lastVoicedChapter = campaign.Chapter;

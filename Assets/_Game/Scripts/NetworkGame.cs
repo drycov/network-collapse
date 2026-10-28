@@ -74,6 +74,13 @@ namespace NetworkCollapse
             map = new GameObject("Network Map").AddComponent<NetworkMapView>();
             hud = new GameObject("Network HUD").AddComponent<NetworkHud>();
             hud.DeviceAction += OnDeviceAction;
+            hud.ContinueGameRequested += () => { paused = false; hud.SetPaused(false); };
+            hud.NewGameRequested += () => { ResetGame(); paused = false; hud.SetPaused(false); };
+            hud.QuitGameRequested += () => { SaveCampaign(); Application.Quit();
+#if UNITY_EDITOR
+                UnityEditor.EditorApplication.isPlaying = false;
+#endif
+            };
             hud.CityExpansionRequested += i => MarketAction(world.OpenCity(simulation, i), true);
             hud.ContractRequested += (city, tariff) => MarketAction(world.SignCustomers(simulation, city, tariff));
             hud.RivalAcquisitionRequested += i => MarketAction(world.AcquireRival(simulation, i), true);
@@ -182,6 +189,9 @@ namespace NetworkCollapse
             };
             hud.RouteVisibilityChanged += enabled => map.SetRouteVisibility(enabled);
             ResetGame();
+            paused = true;
+            hud.SetPaused(true);
+            hud.OpenMenu(true);
         }
 
         private void TogglePause()
@@ -275,6 +285,8 @@ namespace NetworkCollapse
 
         private void Update()
         {
+            if (Input.GetKeyDown(KeyCode.Escape)) { if (hud.MenuOpen) { hud.OpenMenu(false); paused = false; hud.SetPaused(false); } else { hud.OpenMenu(true); paused = true; hud.SetPaused(true); } }
+            if (hud.MenuOpen) return;
             if (Input.GetKeyDown(KeyCode.P)) TogglePause();
             if (Input.GetKeyDown(KeyCode.Alpha1)) hud.SelectScreen(0);
             if (Input.GetKeyDown(KeyCode.Alpha2)) { hud.SelectScreen(1); if (firstRunTutorial && tutorialStep == 1) { tutorialStep = 2; hud.SetTutorial("ОБУЧЕНИЕ 3/3: Нажмите 1, включите строительство и соедините два узла."); } }
@@ -299,18 +311,13 @@ namespace NetworkCollapse
                 Refresh();
             }
 
-            bool overPanel = hud.IsPointerOverHud(Input.mousePosition);
+            bool overPanel = hud.MenuOpen || hud.IsPointerOverHud(Input.mousePosition);
             cameraController.PointerOverHud = overPanel;
 
             if (Input.GetKeyDown(KeyCode.Space)) RandomFailure();
             if (Input.GetKeyDown(KeyCode.R)) ResetGame();
             if (Input.GetKeyDown(KeyCode.B) && hud.SelectedId >= 0) selectingTarget = true;
-            if (Input.GetKeyDown(KeyCode.Escape))
-            {
-                selectingTarget = false;
-                if (hud.BuildMode) hud.SetBuildMode(false);
-                if (hud.TargetId >= 0 && hud.SelectedId >= 0) { hud.Select(hud.SelectedId); map.SetSelected(hud.SelectedId); }
-            }
+
 
             if ((hud.BuildMode || selectingTarget) && hud.SelectedId >= 0)
             {

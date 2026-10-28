@@ -556,6 +556,8 @@ namespace NetworkCollapse
         {
             activeTab = tab;
             if (operationsTab != null) operationsTab.style.display = DisplayStyle.Flex;
+            foreach (var panel in new[] { missionsTab, inventoryTab, marketTab, settingsTab })
+                if (panel != null) panel.style.display = DisplayStyle.None;
             if (windowLayer == null) return;
             if (tab == "operations")
             {

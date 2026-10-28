@@ -169,6 +169,7 @@ namespace NetworkCollapse
 
             var nav = new VisualElement();
             nav.style.flexDirection = FlexDirection.Row;
+            nav.style.flexWrap = Wrap.Wrap;
             nav.style.flexShrink = 0;
             nav.style.minHeight = 34;
             nav.Add(TabButton("СЕТЬ", () => ShowTab("operations")));
@@ -488,7 +489,7 @@ namespace NetworkCollapse
         {
             var label = new Label(text);
             label.style.color = new Color(.72f, .88f, .86f);
-            label.style.fontSize = 13;
+            label.style.fontSize = 14;
             label.style.whiteSpace = WhiteSpace.Normal;
             label.style.flexShrink = 0;
             label.style.flexGrow = 0;
@@ -499,7 +500,11 @@ namespace NetworkCollapse
         private static Button ActionButton(string text, Action action)
         {
             var button = new Button(action) { text = text };
-            button.style.height = 34;
+            button.style.minHeight = 36;
+            button.style.height = StyleKeyword.Auto;
+            button.style.whiteSpace = WhiteSpace.Normal;
+            button.style.paddingTop = 8;
+            button.style.paddingBottom = 8;
             button.style.flexShrink = 0;
             button.style.marginBottom = 7;
             button.style.backgroundColor = new Color(.04f, .16f, .19f, 1f);
@@ -517,7 +522,8 @@ namespace NetworkCollapse
         {
             var button = ActionButton(title, action);
             button.style.flexGrow = 1;
-            button.style.fontSize = 10;
+            button.style.fontSize = 11;
+            button.style.minWidth = 48;
             button.style.marginRight = 3;
             return button;
         }
@@ -600,11 +606,13 @@ namespace NetworkCollapse
             windowContent.style.paddingLeft = 16;
             windowContent.style.paddingRight = 16;
             windowContent.style.paddingBottom = 16;
+            windowContent.style.paddingTop = 12;
             var frame = new VisualElement();
             currentWindow = frame;
             frame.style.width = Length.Percent(72);
             frame.style.maxWidth = 860;
             frame.style.height = Length.Percent(82);
+            frame.style.minHeight = 260;
             frame.style.maxHeight = Length.Percent(88);
             frame.style.overflow = Overflow.Hidden;
             frame.style.flexShrink = 1;
@@ -617,7 +625,8 @@ namespace NetworkCollapse
             header.style.paddingLeft = 16;
             header.style.paddingTop = 12;
             header.style.paddingRight = 16;
-            header.style.height = 52;
+            header.style.minHeight = 52;
+            header.style.flexShrink = 0;
             var caption = Heading("ОКНО ОПЕРАЦИЙ", 17);
             caption.name = "window-title";
             header.Add(caption);
@@ -673,6 +682,11 @@ namespace NetworkCollapse
             marketTab.style.flexShrink = 0;
             marketTab.Add(Heading("STRATEGY / ISP MARKET", 17));
             marketSummary = Body(world.Summary());
+            marketSummary.style.backgroundColor = new Color(.055f, .13f, .16f);
+            marketSummary.style.paddingTop = 12;
+            marketSummary.style.paddingBottom = 12;
+            marketSummary.style.paddingLeft = 12;
+            marketSummary.style.paddingRight = 12;
             marketTab.Add(marketSummary);
             var tabs = new VisualElement();
             tabs.style.flexDirection = FlexDirection.Row;
@@ -901,8 +915,8 @@ namespace NetworkCollapse
             if (rightDock != null && !menuOpen) rightDock.style.display = SelectedId >= 0 || SelectedLinkId >= 0 || BuildMode ? DisplayStyle.Flex : DisplayStyle.None;
             if (world != null && marketSummary != null)
             {
-                marketSummary.text = world.Summary() + "\n" + world.MarketNews;
-                if (bgpTableLabel != null) bgpTableLabel.text = world.BgpSummary();
+                marketSummary.text = world.Summary();
+                if (bgpTableLabel != null && marketMode == "bgp") bgpTableLabel.text = world.BgpSummary();
             }
             availabilityBar.value = model.Availability * 100f;
             objectiveBar.value = model.ObjectiveTimer <= 0 ? 0 : Mathf.Clamp01(model.ObjectiveProgress / model.ObjectiveTimer) * 100f;

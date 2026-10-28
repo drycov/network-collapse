@@ -759,7 +759,7 @@ namespace NetworkCollapse
             GameOver = false;
             TickCount = 0;
             LastScenario = IncidentScenario.None;
-            BuildTopology();
+            // Preserve company infrastructure between campaign levels.
             Step();
         }
     }

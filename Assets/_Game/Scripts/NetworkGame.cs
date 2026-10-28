@@ -74,6 +74,7 @@ namespace NetworkCollapse
             map = new GameObject("Network Map").AddComponent<NetworkMapView>();
             hud = new GameObject("Network HUD").AddComponent<NetworkHud>();
             hud.DeviceAction += OnDeviceAction;
+            hud.MenuRequested += () => { paused = true; hud.SetPaused(true); hud.OpenMenu(true); };
             hud.ContinueGameRequested += () => { paused = false; hud.SetPaused(false); };
             hud.NewGameRequested += () => { ResetGame(); paused = false; hud.SetPaused(false); };
             hud.QuitGameRequested += () => { SaveCampaign(); Application.Quit();

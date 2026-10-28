@@ -23,6 +23,8 @@ namespace NetworkCollapse
         public bool Failed;
         public float RepairRemaining;
         public string Hostname;
+        public string OriginOperator;
+        public int OriginAsn;
         public string ManagementIp;
         public int VlanId;
         public bool AdminEnabled = true;
@@ -122,7 +124,7 @@ namespace NetworkCollapse
             Money -= cost; Customers += count;
             return true;
         }
-        public bool IntegrateRivalSites(System.Collections.Generic.List<Vector2> sites, int customers, int purchasePrice)
+        public bool IntegrateRivalSites(System.Collections.Generic.List<Vector2> sites, int customers, int purchasePrice, string operatorName = null, int originAsn = 0)
         {
             if (sites == null || sites.Count == 0 || sites.Count + Nodes.Count > 90 ||
                 Money < purchasePrice || GameOver) return false;
@@ -134,6 +136,9 @@ namespace NetworkCollapse
             {
                 int site = AddProceduralNode(i == 0 ? EquipmentTier.Distribution : EquipmentTier.Access,
                     sites[i] * .22f + new Vector2(-3f, -2f));
+                Nodes[site].OriginOperator = operatorName ?? "Acquired ISP";
+                Nodes[site].OriginAsn = originAsn;
+                Nodes[site].Hostname = "ma-" + site.ToString("00");
                 int upstream = i == 0 ? parent : initialCount;
                 AddLink(upstream, site, i == 0 ? 220f : 80f, false);
                 // Acquired networks may contain deferred maintenance.

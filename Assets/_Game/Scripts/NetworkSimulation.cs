@@ -9,6 +9,7 @@ namespace NetworkCollapse
     public enum DeviceRole { Router, Layer3Switch, Layer2Switch }
     public enum RoutingMode { Static, OspfSimulated }
     public enum IncidentScenario { None, FiberCut, PowerFailure, Cascade }
+    public enum LinkMedium { Copper, Fiber, Radio }
 
     [Serializable]
     public sealed class NetworkNode
@@ -48,6 +49,10 @@ namespace NetworkCollapse
         public float Capacity, Load;
         public bool Failed;
         public bool PlayerBuilt;
+        public LinkMedium Medium;
+        public float ConstructionRemaining;
+        public int PortA, PortB;
+        public int MaterialCost;
         public string EndpointA;
         public string EndpointB;
         public string Prefix;
@@ -284,31 +289,50 @@ namespace NetworkCollapse
             Links.FindIndex(l => (l.A == a && l.B == b) || (l.A == b && l.B == a));
 
         public const float ConstructionMaxDistance = 13f;
-        public int GetBuildCost(int a, int b)
+        public float MediumMaxDistance(LinkMedium medium) =>
+            medium == LinkMedium.Copper ? 2.0f : medium == LinkMedium.Fiber ? 13f : 10f;
+        public float MediumCapacity(LinkMedium medium, int speed) =>
+            medium == LinkMedium.Copper ? Mathf.Min(speed, 100) :
+            medium == LinkMedium.Radio ? Mathf.Min(speed, 150) : Mathf.Min(speed, 1000);
+        public int GetBuildCost(int a, int b) => GetBuildCost(a, b, LinkMedium.Fiber, 100);
+        public int GetBuildCost(int a, int b, LinkMedium medium, int speed)
         {
             if (a < 0 || b < 0 || a >= Nodes.Count || b >= Nodes.Count || a == b) return -1;
             float length = Vector2.Distance(Nodes[a].Position, Nodes[b].Position);
-            return BuildCost + Mathf.CeilToInt(length * 3f);
+            int materialRate = medium == LinkMedium.Copper ? 2 : medium == LinkMedium.Fiber ? 5 : 3;
+            int hardware = medium == LinkMedium.Copper ? 8 : medium == LinkMedium.Fiber ? 18 : 26;
+            return 12 + Mathf.CeilToInt(length * materialRate) + hardware + Mathf.CeilToInt(MediumCapacity(medium, speed) / 40f);
         }
-        public string BuildBlockReason(int a, int b)
+        public int UsedPorts(int node) => Links.FindAll(l => l.A == node || l.B == node).Count;
+        public int PortLimit(int node) => Nodes[node].Role == DeviceRole.Router ? 12 :
+            Nodes[node].Role == DeviceRole.Layer3Switch ? 16 : 8;
+        public string BuildBlockReason(int a, int b) => BuildBlockReason(a, b, LinkMedium.Fiber, 100);
+        public string BuildBlockReason(int a, int b, LinkMedium medium, int speed)
         {
             if (GameOver) return "Игра завершена";
             if (a < 0 || b < 0 || a >= Nodes.Count || b >= Nodes.Count) return "Выберите два узла";
-            if (a == b) return "Нельзя соединить узел с самим собой";
-            if (FindLink(a, b) >= 0) return "Канал уже существует";
-            if (Nodes[a].Failed || Nodes[b].Failed || !Nodes[a].AdminEnabled || !Nodes[b].AdminEnabled)
-                return "Конечное оборудование недоступно";
-            if (Vector2.Distance(Nodes[a].Position, Nodes[b].Position) > ConstructionMaxDistance)
-                return "Дистанция превышает лимит трассы";
-            if (Money < GetBuildCost(a, b)) return "Недостаточно средств";
+            if (a == b) return "Нельзя соединить узел с собой";
+            if (FindLink(a, b) >= 0) return "Соединение уже существует";
+            if (Nodes[a].Failed || Nodes[b].Failed || !Nodes[a].AdminEnabled || !Nodes[b].AdminEnabled) return "Оборудование недоступно";
+            if (UsedPorts(a) >= PortLimit(a) || UsedPorts(b) >= PortLimit(b)) return "Нет свободных портов";
+            if (speed <= 0 || MediumCapacity(medium, speed) < speed) return "Скорость не поддерживается средой";
+            if (Vector2.Distance(Nodes[a].Position, Nodes[b].Position) > MediumMaxDistance(medium)) return "Превышена длина трассы";
+            if (Money < GetBuildCost(a, b, medium, speed)) return "Недостаточно средств";
             return null;
         }
-        public bool BuildLink(int a, int b)
+        public bool BuildLink(int a, int b) => BuildLink(a, b, LinkMedium.Fiber, 100);
+        public bool BuildLink(int a, int b, LinkMedium medium, int speed)
         {
-            if (BuildBlockReason(a, b) != null) return false;
-            int cost = GetBuildCost(a, b);
-            Money -= cost;
-            AddLink(a, b, 48 + Level * 2, true);
+            if (BuildBlockReason(a, b, medium, speed) != null) return false;
+            int price = GetBuildCost(a, b, medium, speed);
+            int portA = UsedPorts(a) + 1, portB = UsedPorts(b) + 1;
+            Money -= price;
+            AddLink(a, b, speed, true);
+            var link = Links[Links.Count - 1];
+            link.Medium = medium; link.PortA = portA; link.PortB = portB;
+            link.MaterialCost = price;
+            link.ConstructionRemaining = 4f + Vector2.Distance(Nodes[a].Position, Nodes[b].Position) *
+                (medium == LinkMedium.Fiber ? 1.3f : medium == LinkMedium.Copper ? .9f : .6f);
             Step();
             return true;
         }
@@ -347,6 +371,7 @@ namespace NetworkCollapse
                 }
                 foreach (var link in Links)
                 {
+                    if (link.ConstructionRemaining > 0f) link.ConstructionRemaining = Mathf.Max(0f, link.ConstructionRemaining - dt);
                     if (link.Failed && link.RepairRemaining > 0f)
                     {
                         link.RepairRemaining -= dt;
@@ -479,7 +504,7 @@ namespace NetworkCollapse
                 for (int i = 0; i < Links.Count; i++)
                 {
                     var link = Links[i];
-                    if (link.Failed || (excludedLinks != null && excludedLinks.Contains(i)) || link.Capacity <= 0f || link.Capacity - link.Load + 0.0001f < demand ||
+                    if (link.ConstructionRemaining > 0f || link.Failed || (excludedLinks != null && excludedLinks.Contains(i)) || link.Capacity <= 0f || link.Capacity - link.Load + 0.0001f < demand ||
                         !Interfaces.Exists(n => n.LinkIndex == i && n.NodeId == link.A && n.AdminUp) ||
                         !Interfaces.Exists(n => n.LinkIndex == i && n.NodeId == link.B && n.AdminUp)) continue;
                     int next = link.A == current ? link.B : link.B == current ? link.A : -1;
@@ -579,7 +604,7 @@ namespace NetworkCollapse
         {
             if (index < 0 || index >= Links.Count) return false;
             var link = Links[index];
-            if (!link.Failed || link.RepairRemaining > 0f || Money < LinkRepairCost) return false;
+            if (link.ConstructionRemaining > 0f || !link.Failed || link.RepairRemaining > 0f || Money < LinkRepairCost) return false;
             Money -= LinkRepairCost;
             link.RepairRemaining = LinkRepairSeconds;
             return true;

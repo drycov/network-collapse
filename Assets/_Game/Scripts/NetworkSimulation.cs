@@ -207,7 +207,7 @@ namespace NetworkCollapse
                 requested += sender.Demand;
                 if (sender.Failed || Nodes[0].Failed) continue;
 
-                var path = FindPath(source, 0, sender.Demand);
+                var path = FindOptimalPath(source, 0, sender.Demand);
                 if (path == null || path.Count == 0) continue;
 
                 bool enough = true;
@@ -279,43 +279,55 @@ namespace NetworkCollapse
                 GameOver = true;
         }
 
-        private List<int> FindPath(int start, int goal, float demand)
+        // Capacity-aware Dijkstra. A channel must have enough residual bandwidth for the full demand.
+        // Cost combines distance in hops, utilization after reservation and physical length.
+        public List<int> FindOptimalPath(int start, int goal, float demand)
         {
-            var visited = new bool[Nodes.Count];
-            var parents = new int[Nodes.Count];
-            var parentLinks = new int[Nodes.Count];
-            for (int i = 0; i < parents.Length; i++) parents[i] = -1;
-
-            var queue = new Queue<int>();
-            queue.Enqueue(start);
-            visited[start] = true;
-
-            while (queue.Count > 0)
+            if (start < 0 || goal < 0 || start >= Nodes.Count || goal >= Nodes.Count ||
+                Nodes[start].Failed || Nodes[goal].Failed || demand <= 0f) return null;
+            if (start == goal) return new List<int>();
+            int count = Nodes.Count;
+            var distance = new float[count];
+            var parent = new int[count];
+            var parentLink = new int[count];
+            var visited = new bool[count];
+            for (int i = 0; i < count; i++) { distance[i] = float.PositiveInfinity; parent[i] = -1; }
+            distance[start] = 0f;
+            for (int iteration = 0; iteration < count; iteration++)
             {
-                int current = queue.Dequeue();
+                int current = -1;
+                for (int i = 0; i < count; i++)
+                    if (!visited[i] && (current < 0 || distance[i] < distance[current])) current = i;
+                if (current < 0 || float.IsPositiveInfinity(distance[current])) break;
                 if (current == goal) break;
-
+                visited[current] = true;
                 for (int i = 0; i < Links.Count; i++)
                 {
                     var link = Links[i];
-                    if (link.Failed || link.Load + demand > link.Capacity) continue;
+                    if (link.Failed || link.Capacity <= 0f || link.Capacity - link.Load + 0.0001f < demand) continue;
                     int next = link.A == current ? link.B : link.B == current ? link.A : -1;
                     if (next < 0 || visited[next] || Nodes[next].Failed) continue;
-                    visited[next] = true;
-                    parents[next] = current;
-                    parentLinks[next] = i;
-                    queue.Enqueue(next);
+                    float utilization = Mathf.Clamp01((link.Load + demand) / link.Capacity);
+                    float length = Vector2.Distance(Nodes[current].Position, Nodes[next].Position);
+                    float cost = 1f + 3f * utilization * utilization + .015f * length;
+                    float proposed = distance[current] + cost;
+                    if (proposed < distance[next] - 0.0001f)
+                    {
+                        distance[next] = proposed;
+                        parent[next] = current;
+                        parentLink[next] = i;
+                    }
                 }
             }
-
-            if (!visited[goal]) return null;
-
-            var result = new List<int>();
-            for (int n = goal; n != start; n = parents[n])
-                result.Add(parentLinks[n]);
-            result.Reverse();
-            return result;
+            if (parent[goal] < 0) return null;
+            var path = new List<int>();
+            for (int n = goal; n != start; n = parent[n]) path.Add(parentLink[n]);
+            path.Reverse();
+            return path;
         }
+
+        public List<int> FindDisplayRoute(int source) =>
+            source > 0 && source < Nodes.Count ? FindOptimalPath(source, 0, Nodes[source].Demand) : null;
 
         /// <summary>Start timed repair of a failed node (costs money, takes time).</summary>
         public bool StartNodeRepair(int id)

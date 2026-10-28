@@ -19,3 +19,7 @@ Import instructions:
 5. Only use source files from sources where redistribution of the selected contents is permitted.
 
 Creative Commons CC0 assets are suitable for commercial use according to the linked publisher pages. Brand marks/logos and third-party items within downloaded archives, if any, must be reviewed separately.
+
+## One-click import in Unity Editor
+
+Open **Network Collapse → Import Free CC0 Assets** to download the Kenney CC0 UI Sci-Fi and Interface Sounds zip archives from OpenGameArt. The importer selects PNG panel/button images and OGG sounds, placing them in `Assets/Resources/NetworkTheme` and `Assets/Resources/Audio`. `NetworkHud` reads the optional panel/button textures; `NetworkAudio` reads matching sound cue filenames and falls back to generated audio if they are missing. Review chosen texture/sound variants in Unity before release, because the importer matches filenames heuristically. This command must run in Unity Editor with network access; binary assets are not bundled in GitHub until you import and commit them. The import has not been tested in Unity Editor.

@@ -106,26 +106,11 @@ namespace NetworkCollapse
                 {
                     hud.AddEvent($"Монтаж N{a:00}–N{b:00}: {medium}, {speed} Mbps, {cost} кр.");
                     campaign.OnAction(MissionKind.BuildLink);
+                    if (firstRunTutorial && tutorialStep == 2) { firstRunTutorial = false; PlayerPrefs.SetInt("NetworkCollapse.TutorialSeen", 1); hud.SetTutorial(""); }
                     audio.Play(SoundCue.LinkBuilt);
                     hud.Select(a); map.SetSelected(a); SaveCampaign(); Refresh();
                 }
                 else { hud.AddEvent("Монтаж отклонён: " + simulation.BuildBlockReason(a, b, medium, speed)); audio.Play(SoundCue.Error); }
-            };
-            hud.BuildLinkRequested += (a, b) =>
-            {
-                if (!simulation.GameOver && simulation.BuildLink(a, b))
-                {
-                    hud.AddEvent($"Канал N{a:00}–N{b:00} построен за {simulation.GetBuildCost(a, b)} кр.");
-                    campaign.OnAction(MissionKind.BuildLink);
-                    if (firstRunTutorial && tutorialStep == 2) { firstRunTutorial = false; PlayerPrefs.SetInt("NetworkCollapse.TutorialSeen", 1); hud.SetTutorial(""); SaveCampaign(); }
-                    audio.Play(SoundCue.LinkBuilt);
-                    map.SetBuildPreview(-1, Vector3.zero);
-                    hud.Select(a);
-                    map.SetSelected(a);
-                    SaveCampaign();
-                    Refresh();
-                }
-                else { hud.AddEvent("Строительство отклонено: " + simulation.BuildBlockReason(a, b)); audio.Play(SoundCue.Error); }
             };
             hud.UpgradeLinkRequested += id =>
             {

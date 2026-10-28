@@ -81,6 +81,7 @@ namespace NetworkCollapse
 
         public int TickCount { get; private set; }
         public int Money { get; private set; } = 150;
+        public void GrantCredits(int amount) { if (amount > 0) Money += amount; }
         public float Availability { get; private set; } = 1f;
         public float DroppedTraffic { get; private set; }
         public int FailedNodes => Nodes.FindAll(n => n.Failed).Count;

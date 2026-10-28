@@ -44,6 +44,7 @@ namespace NetworkCollapse
             hud.NextLevelRequested += OnNextLevel;
             hud.BuildModeChanged += enabled => { selectingTarget = false; hud.AddEvent(enabled ? "Строительство: выберите первый узел" : "Строительство выключено"); };
             hud.FilterChanged += tier => { map.SetTierFilter(tier); hud.AddEvent("Фильтр: " + (tier.HasValue ? tier.Value.ToString() : "Все")); };
+            hud.RouteVisibilityChanged += enabled => map.SetRouteVisibility(enabled);
             ResetGame();
         }
 
@@ -93,7 +94,7 @@ namespace NetworkCollapse
 
         private void Refresh()
         {
-            map.Refresh();
+            map.HighlightRoute(hud.SelectedId);
             hud.Refresh();
         }
 
@@ -113,7 +114,7 @@ namespace NetworkCollapse
             if (Input.GetKeyDown(KeyCode.Space)) RandomFailure();
             if (Input.GetKeyDown(KeyCode.R)) ResetGame();
             if (Input.GetKeyDown(KeyCode.B) && hud.SelectedId >= 0) selectingTarget = true;
-            if (Input.GetKeyDown(KeyCode.Escape)) selectingTarget = false;
+            if (Input.GetKeyDown(KeyCode.Escape)) { selectingTarget = false; if (hud.BuildMode) hud.SetBuildMode(false); }
 
             if (Input.GetMouseButtonDown(0) && !overPanel)
             {
@@ -132,6 +133,7 @@ namespace NetworkCollapse
                     {
                         map.SetSelected(id);
                         hud.Select(id);
+                        map.HighlightRoute(id);
                     }
                     else
                     {
@@ -140,6 +142,7 @@ namespace NetworkCollapse
                         {
                             map.SetSelectedLink(linkId);
                             hud.SelectLink(linkId);
+                            map.HighlightRoute(-1);
                         }
                     }
                 }

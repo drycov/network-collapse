@@ -1,0 +1,1 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements"><ui:VisualElement name="map-overlay" picking-mode="Ignore"><ui:Label name="map-status" text="NETWORK COLLAPSE" class="nc-title"/></ui:VisualElement></ui:UXML>

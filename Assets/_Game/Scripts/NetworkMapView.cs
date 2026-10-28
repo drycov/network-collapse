@@ -259,8 +259,9 @@ namespace NetworkCollapse
             for (int i = 0; i < simulation.Links.Count; i++)
             {
                 var link = simulation.Links[i];
+                bool constructing = link.ConstructionRemaining > 0f;
                 bool down = link.Failed || simulation.Nodes[link.A].Failed || simulation.Nodes[link.B].Failed;
-                Color col = down
+                Color col = constructing ? new Color(.95f, .69f, .26f) : down
                     ? new Color(.36f, .39f, .48f)
                     : Color.Lerp(new Color(.12f, .62f, .77f), new Color(1f, .48f, .22f),
                         Mathf.Clamp01(link.Capacity > 0 ? link.Load / link.Capacity : 1));
@@ -270,7 +271,7 @@ namespace NetworkCollapse
                 if (i == selectedLink) col = Color.white;
 
                 linkViews[i].startColor = linkViews[i].endColor = col;
-                float w = down ? .04f : Mathf.Lerp(.05f, .095f, Mathf.Clamp01(link.Load / Mathf.Max(1f, link.Capacity)));
+                float w = constructing ? .035f : down ? .04f : Mathf.Lerp(.05f, .095f, Mathf.Clamp01(link.Load / Mathf.Max(1f, link.Capacity)));
                 if (link.PlayerBuilt) w += .015f;
                 if (ShowRoutes && backupRouteLinks.Contains(i)) w = .12f;
                 if (ShowRoutes && routeLinks.Contains(i)) w = .16f;
@@ -359,7 +360,7 @@ namespace NetworkCollapse
                 }
 
                 var link = simulation.Links[linkIndex];
-                bool active = !link.Failed &&
+                bool active = link.ConstructionRemaining <= 0f && !link.Failed &&
                               !simulation.Nodes[link.A].Failed &&
                               !simulation.Nodes[link.B].Failed &&
                               link.Load > 0.4f;

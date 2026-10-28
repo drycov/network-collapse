@@ -272,7 +272,7 @@ namespace NetworkCollapse
             int index = Links.Count;
             string prefix = "10.254." + (index / 128) + "." + ((index % 128) * 2);
             Links.Add(new NetworkLink {
-                A = a, B = b, Capacity = capacity, PlayerBuilt = built,
+                A = a, B = b, Capacity = capacity, PlayerBuilt = built, Medium = LinkMedium.Fiber,
                 Prefix = prefix + "/31", EndpointA = prefix, EndpointB = "10.254." + (index / 128) + "." + ((index % 128) * 2 + 1)
             });
             var left = Nodes[a]; var right = Nodes[b];

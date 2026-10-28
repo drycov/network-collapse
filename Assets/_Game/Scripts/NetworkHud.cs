@@ -81,7 +81,10 @@ namespace NetworkCollapse
 
         public bool IsPointerOverHud(Vector2 screen)
         {
-            return screen.x < 340 || screen.x > Screen.width - 350;
+            if (menuOpen) return true;
+            bool inspectorVisible = rightDock != null && rightDock.resolvedStyle.display != DisplayStyle.None;
+            return screen.y > Screen.height - 52 || screen.x < (Screen.width < 1100 ? Mathf.Clamp(Screen.width * .24f, 195, 270) + 18 : 350) ||
+                   (inspectorVisible && screen.x > Screen.width - (Screen.width < 1100 ? Mathf.Clamp(Screen.width * .24f, 195, 270) + 18 : 360));
         }
 
         public void Initialize(NetworkSimulation simulation)

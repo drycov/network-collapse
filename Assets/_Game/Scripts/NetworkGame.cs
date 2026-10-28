@@ -286,7 +286,7 @@ namespace NetworkCollapse
 
         private void Update()
         {
-            if (Input.GetKeyDown(KeyCode.Escape)) { if (hud.MenuOpen) { hud.OpenMenu(false); paused = false; hud.SetPaused(false); } else { hud.OpenMenu(true); paused = true; hud.SetPaused(true); } }
+            if (Input.GetKeyDown(KeyCode.Escape)) { if (hud.MenuOpen) { hud.OpenMenu(false); paused = false; hud.SetPaused(false); } else if (hud.HasWindowOpen) { hud.CloseGameWindow(); } else { hud.OpenMenu(true); paused = true; hud.SetPaused(true); } }
             if (hud.MenuOpen) return;
             if (Input.GetKeyDown(KeyCode.P)) TogglePause();
             if (Input.GetKeyDown(KeyCode.Alpha1)) hud.SelectScreen(0);

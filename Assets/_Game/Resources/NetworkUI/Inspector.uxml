@@ -1,0 +1,1 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements"><ui:VisualElement name="inspector-root"><ui:Label text="ИНСПЕКТОР СЕТИ" class="nc-title"/><ui:VisualElement name="inspector-content"/></ui:VisualElement></ui:UXML>

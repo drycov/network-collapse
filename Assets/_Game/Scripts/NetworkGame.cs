@@ -85,6 +85,7 @@ namespace NetworkCollapse
             hud.CityExpansionRequested += i => MarketAction(world.OpenCity(simulation, i), true);
             hud.ContractRequested += (city, tariff) => MarketAction(world.SignCustomers(simulation, city, tariff));
             hud.RivalAcquisitionRequested += i => MarketAction(world.AcquireRival(simulation, i), true);
+            hud.SubsidiaryRepairRequested += i => MarketAction(world.DispatchSubsidiaryTeam(simulation, i));
             hud.RivalNegotiationRequested += (i, offer) => MarketAction(world.Negotiate(i, offer));
             hud.PartnerConnectionRequested += i => MarketAction(world.ConnectPartner(simulation, i));
             hud.ExpandNetworkRequested += () =>

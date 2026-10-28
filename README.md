@@ -160,3 +160,11 @@ Limitations: initial geography and rivals are authored data rather than procedur
 - Economic ticks use the existing two-second simulation cadence. This is deliberately accelerated strategy-game time.
 
 **Not yet implemented:** geographic polygon boundaries, rendering independent rival equipment on the main network map, bidding rounds/escrow and regulation, multi-route BGP best-path calculation, routing across simulated international capacity constraints, realistic customer contract billing and churn. Unity Editor compilation and UI playtest remain outstanding.
+
+## Integrated M&A topology and game windows
+
+Purchasing a rival now provisions its saved site coordinates as new owned distribution/access devices on the **same physical network graph**, with backhaul links to an existing distribution point. Some acquired assets start failed and require engineering repairs, while the portfolio incurs recurring acquired-site maintenance each simulation tick. Acquired sites, liabilities, link failures and subscriber totals are stored in the existing network snapshot. This is a deterministic game abstraction: map coordinates are transformed into the local engineering view, not geographically accurate distances. Existing worlds without rival NetworkSites should start a new campaign for full acquisition behavior.
+
+The Network, Missions, Inventory, Market and Settings navigation now works differently: **Network** remains in the left dock; **Missions**, **Inventory**, **Market** and **Settings** open separate centered scrollable windows over the physical map with explicit close controls. The inspector remains contextual. Escape opens the main menu, and the world view is blocked from receiving clicks under modal windows.
+
+Known limitations: imported networks currently have a simple hub/backhaul structure, not the rival's full pre-acquisition routing table. Network ownership and maintenance are reflected through physical equipment and financial upkeep, rather than separately identified subsidiaries/maintenance contracts. Unity Editor compilation and visual verification are still needed.

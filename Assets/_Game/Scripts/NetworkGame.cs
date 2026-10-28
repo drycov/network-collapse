@@ -2,7 +2,7 @@ using UnityEngine;
 
 namespace NetworkCollapse
 {
-    /// <summary>Composition root: simulation, world view, camera and HUD.</summary>
+    /// <summary>Composition root: simulation, world view, camera, HUD and campaign.</summary>
     public sealed class NetworkGame : MonoBehaviour
     {
         private NetworkSimulation simulation;
@@ -39,24 +39,70 @@ namespace NetworkCollapse
             hud.DeviceAction += OnDeviceAction;
             hud.RandomFailureRequested += RandomFailure;
             hud.ResetRequested += ResetGame;
-            hud.IncidentRequested += type => { if (simulation.GameOver) return; simulation.StartIncident(type); incidentPending = true; hud.AddEvent("Сценарий: " + type); Refresh(); };
-            hud.BuildLinkRequested += (a, b) => { if (!simulation.GameOver && simulation.BuildLink(a, b)) { hud.AddEvent($"Канал N{a:00}–N{b:00} построен"); campaign.OnAction(MissionKind.BuildLink); map.SetBuildPreview(-1, Vector3.zero); hud.Select(a); map.SetSelected(a); Refresh(); } };
-            hud.UpgradeLinkRequested += id => { if (!simulation.GameOver && simulation.UpgradeLink(id)) { hud.AddEvent("Модернизирован канал #" + id); campaign.OnAction(MissionKind.UpgradeLink); Refresh(); } };
-            hud.RepairLinkRequested += id => { if (!simulation.GameOver && simulation.RepairLink(id)) { hud.AddEvent("Ремонт канала #" + id + " начат"); Refresh(); } };
+            hud.IncidentRequested += type =>
+            {
+                if (simulation.GameOver) return;
+                simulation.StartIncident(type);
+                incidentPending = true;
+                hud.AddEvent("Сценарий: " + type);
+                Refresh();
+            };
+            hud.BuildLinkRequested += (a, b) =>
+            {
+                if (!simulation.GameOver && simulation.BuildLink(a, b))
+                {
+                    hud.AddEvent($"Канал N{a:00}–N{b:00} построен");
+                    campaign.OnAction(MissionKind.BuildLink);
+                    map.SetBuildPreview(-1, Vector3.zero);
+                    hud.Select(a);
+                    map.SetSelected(a);
+                    Refresh();
+                }
+            };
+            hud.UpgradeLinkRequested += id =>
+            {
+                if (!simulation.GameOver && simulation.UpgradeLink(id))
+                {
+                    hud.AddEvent("Модернизирован канал #" + id);
+                    campaign.OnAction(MissionKind.UpgradeLink);
+                    Refresh();
+                }
+            };
+            hud.RepairLinkRequested += id =>
+            {
+                if (!simulation.GameOver && simulation.RepairLink(id))
+                {
+                    hud.AddEvent("Ремонт канала #" + id + " начат");
+                    campaign.OnAction(MissionKind.RepairDevice);
+                    Refresh();
+                }
+            };
             hud.NextLevelRequested += OnNextLevel;
-            hud.UseInventoryRequested += id => { if (campaign.UseItem(id, simulation)) Refresh(); };
+            hud.UseInventoryRequested += id =>
+            {
+                if (campaign.UseItem(id, simulation)) Refresh();
+            };
             hud.ConfigureDeviceRequested += (id, vlan, mtu, enabled, routing) =>
             {
                 if (simulation.GameOver) return;
                 if (simulation.ConfigureNode(id, vlan, mtu, enabled, routing))
                 {
-                    hud.AddEvent("Настройки применены: N" + id.ToString("00")); campaign.OnAction(MissionKind.ConfigureDevice);
+                    hud.AddEvent("Настройки применены: N" + id.ToString("00"));
+                    campaign.OnAction(MissionKind.ConfigureDevice);
                     Refresh();
                 }
                 else hud.AddEvent("Ошибка настройки: VLAN 1-4094, MTU 576-9216");
             };
-            hud.BuildModeChanged += enabled => { selectingTarget = false; hud.AddEvent(enabled ? "Строительство: выберите первый узел" : "Строительство выключено"); };
-            hud.FilterChanged += tier => { map.SetTierFilter(tier); hud.AddEvent("Фильтр: " + (tier.HasValue ? tier.Value.ToString() : "Все")); };
+            hud.BuildModeChanged += enabled =>
+            {
+                selectingTarget = false;
+                hud.AddEvent(enabled ? "Строительство: выберите первый узел" : "Строительство выключено");
+            };
+            hud.FilterChanged += tier =>
+            {
+                map.SetTierFilter(tier);
+                hud.AddEvent("Фильтр: " + (tier.HasValue ? tier.Value.ToString() : "Все"));
+            };
             hud.RouteVisibilityChanged += enabled => map.SetRouteVisibility(enabled);
             ResetGame();
         }
@@ -74,22 +120,22 @@ namespace NetworkCollapse
             hud.Initialize(simulation);
             hud.SetCampaign(campaign);
             hud.Select(-1);
-            hud.AddEvent("Диспетчерская запущена");
+            hud.AddEvent("Диспетчерская запущена · " + campaign.ChapterTitle);
+            hud.AddEvent(campaign.StoryBriefing);
             cameraController.ResetView();
         }
 
         private void OnNextLevel()
         {
             if (!simulation.ObjectiveComplete) return;
-            int next = simulation.Level + 1;
-            // Keep score/money continuity via AdvanceToNextLevel
             simulation.AdvanceToNextLevel();
             selectingTarget = false;
             elapsed = 0f;
             map.Initialize(simulation);
             hud.Initialize(simulation);
+            hud.SetCampaign(campaign);
             hud.Select(-1);
-            hud.AddEvent("Уровень " + simulation.Level + " запущен");
+            hud.AddEvent("Уровень " + simulation.Level + " · " + campaign.ChapterTitle);
             cameraController.ResetView();
         }
 
@@ -97,6 +143,7 @@ namespace NetworkCollapse
         {
             if (simulation.GameOver) return;
             simulation.RandomFailure();
+            incidentPending = true;
             hud.AddEvent("Авария: " + simulation.LastScenario);
             Refresh();
         }
@@ -106,7 +153,8 @@ namespace NetworkCollapse
             if (!simulation.GameOver && simulation.ToggleFailure(id))
             {
                 hud.AddEvent("Действие с узлом N" + id.ToString("00"));
-                if (simulation.Nodes[id].RepairRemaining > 0f) campaign.OnAction(MissionKind.RepairDevice);
+                if (simulation.Nodes[id].RepairRemaining > 0f)
+                    campaign.OnAction(MissionKind.RepairDevice);
                 Refresh();
             }
         }
@@ -125,7 +173,7 @@ namespace NetworkCollapse
                 elapsed -= 2f;
                 simulation.Step(2f);
                 campaign.OnTick(simulation);
-                if (incidentPending && !simulation.GameOver && simulation.Availability >= .60f)
+                if (incidentPending && !simulation.GameOver && simulation.Availability >= 0.60f)
                 {
                     campaign.OnAction(MissionKind.SurviveIncident);
                     incidentPending = false;
@@ -139,7 +187,11 @@ namespace NetworkCollapse
             if (Input.GetKeyDown(KeyCode.Space)) RandomFailure();
             if (Input.GetKeyDown(KeyCode.R)) ResetGame();
             if (Input.GetKeyDown(KeyCode.B) && hud.SelectedId >= 0) selectingTarget = true;
-            if (Input.GetKeyDown(KeyCode.Escape)) { selectingTarget = false; if (hud.BuildMode) hud.SetBuildMode(false); }
+            if (Input.GetKeyDown(KeyCode.Escape))
+            {
+                selectingTarget = false;
+                if (hud.BuildMode) hud.SetBuildMode(false);
+            }
 
             if ((hud.BuildMode || selectingTarget) && hud.SelectedId >= 0)
             {

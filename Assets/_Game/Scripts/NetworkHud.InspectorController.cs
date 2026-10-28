@@ -21,43 +21,8 @@ namespace NetworkCollapse
         }
 
         private int FindSelectedLink() => model == null ? -1 : model.FindLink(SelectedId, TargetId);
-        private int ActiveLink() => SelectedLinkId >= 0 ? SelectedLinkId : FindSelectedLink();
-
-        public void Select(int id)
-        {
-            TargetId = -1;
-            SelectedLinkId = -1;
-            SelectedId = id;
-            if (model != null && id >= 0 && id < model.Nodes.Count)
-            {
-                var node = model.Nodes[id];
-                vlanField.SetValueWithoutNotify(node.VlanId);
-                mtuField.SetValueWithoutNotify(node.Mtu);
-                desiredAdmin = node.AdminEnabled;
-                desiredRouting = node.Routing;
-                UpdateConfigButtons();
-            }
-            Refresh();
-        }
 
         private int ActiveLink() => SelectedLinkId >= 0 ? SelectedLinkId : FindSelectedLink();
-
-        public void Select(int id)
-        {
-            TargetId = -1;
-            SelectedLinkId = -1;
-            SelectedId = id;
-            if (model != null && id >= 0 && id < model.Nodes.Count)
-            {
-                var node = model.Nodes[id];
-                vlanField.SetValueWithoutNotify(node.VlanId);
-                mtuField.SetValueWithoutNotify(node.Mtu);
-                desiredAdmin = node.AdminEnabled;
-                desiredRouting = node.Routing;
-                UpdateConfigButtons();
-            }
-            Refresh();
-        }
 
         public void Select(int id)
         {

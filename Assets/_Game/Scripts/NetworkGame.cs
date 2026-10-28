@@ -87,6 +87,7 @@ namespace NetworkCollapse
                 else hud.AddEvent("Кампания отклонена: недостаточно средств или мощности Access.");
             };
             hud.DiagnoseRequested += id => { hud.AddEvent("NOC / " + simulation.Diagnose(id)); audio.Play(SoundCue.Select); };
+            hud.ScanNetworkRequested += () => { hud.AddEvent(simulation.ScanNetwork()); audio.Play(SoundCue.Select); };
             hud.RandomFailureRequested += RandomFailure;
             hud.ResetRequested += ResetGame;
             hud.IncidentRequested += type =>

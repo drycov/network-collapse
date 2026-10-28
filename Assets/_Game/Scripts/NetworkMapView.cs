@@ -27,6 +27,7 @@ namespace NetworkCollapse
         private float clock;
         private EquipmentTier? visibleTier;
         private readonly HashSet<int> routeLinks = new HashSet<int>();
+        private readonly HashSet<int> backupRouteLinks = new HashSet<int>();
         private int routeSource = -1;
         public bool ShowRoutes { get; private set; } = true;
         public void SetRouteVisibility(bool enabled) { ShowRoutes = enabled; Refresh(); }
@@ -34,10 +35,13 @@ namespace NetworkCollapse
         {
             routeSource = source;
             routeLinks.Clear();
+            backupRouteLinks.Clear();
             if (simulation != null)
             {
                 var path = simulation.FindDisplayRoute(source);
                 if (path != null) foreach (int link in path) routeLinks.Add(link);
+                if (simulation.BackupPaths.TryGetValue(source, out var backup))
+                    foreach (int link in backup) backupRouteLinks.Add(link);
             }
             Refresh();
         }
@@ -125,6 +129,7 @@ namespace NetworkCollapse
             secondSelected = -1;
             selectedLink = -1;
             routeLinks.Clear();
+            backupRouteLinks.Clear();
             routeSource = -1;
             previewLine = null;
             Refresh();
@@ -237,12 +242,14 @@ namespace NetworkCollapse
                     : Color.Lerp(new Color(.12f, .62f, .77f), new Color(1f, .48f, .22f),
                         Mathf.Clamp01(link.Capacity > 0 ? link.Load / link.Capacity : 1));
 
+                if (ShowRoutes && backupRouteLinks.Contains(i)) col = new Color(.75f, .42f, 1f);
                 if (ShowRoutes && routeLinks.Contains(i)) col = new Color(.95f, .94f, .29f);
                 if (i == selectedLink) col = Color.white;
 
                 linkViews[i].startColor = linkViews[i].endColor = col;
                 float w = down ? .04f : Mathf.Lerp(.05f, .095f, Mathf.Clamp01(link.Load / Mathf.Max(1f, link.Capacity)));
                 if (link.PlayerBuilt) w += .015f;
+                if (ShowRoutes && backupRouteLinks.Contains(i)) w = .12f;
                 if (ShowRoutes && routeLinks.Contains(i)) w = .16f;
                 linkViews[i].startWidth = linkViews[i].endWidth = w;
                 linkViews[i].SetPosition(0, simulation.Nodes[link.A].Position);

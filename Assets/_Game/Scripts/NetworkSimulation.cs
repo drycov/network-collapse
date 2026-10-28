@@ -600,13 +600,24 @@ namespace NetworkCollapse
             return true;
         }
 
+        public int GetLinkRepairCost(int index)
+        {
+            if (index < 0 || index >= Links.Count) return LinkRepairCost;
+            var link = Links[index];
+            return link.Medium == LinkMedium.Fiber ? 18 : link.Medium == LinkMedium.Radio ? 15 : 10;
+        }
+        public float GetLinkRepairTime(int index)
+        {
+            if (index < 0 || index >= Links.Count) return LinkRepairSeconds;
+            return Links[index].Medium == LinkMedium.Fiber ? 8f : Links[index].Medium == LinkMedium.Radio ? 5f : 4f;
+        }
         public bool StartLinkRepair(int index)
         {
             if (index < 0 || index >= Links.Count) return false;
             var link = Links[index];
-            if (link.ConstructionRemaining > 0f || !link.Failed || link.RepairRemaining > 0f || Money < LinkRepairCost) return false;
-            Money -= LinkRepairCost;
-            link.RepairRemaining = LinkRepairSeconds;
+            if (link.ConstructionRemaining > 0f || !link.Failed || link.RepairRemaining > 0f || Money < GetLinkRepairCost(index)) return false;
+            Money -= GetLinkRepairCost(index);
+            link.RepairRemaining = GetLinkRepairTime(index);
             return true;
         }
 

@@ -38,7 +38,7 @@ namespace NetworkCollapse
             hud.RandomFailureRequested += RandomFailure;
             hud.ResetRequested += ResetGame;
             hud.IncidentRequested += type => { if (simulation.GameOver) return; simulation.StartIncident(type); hud.AddEvent("Сценарий: " + type); Refresh(); };
-            hud.BuildLinkRequested += (a, b) => { if (!simulation.GameOver && simulation.BuildLink(a, b)) { hud.AddEvent($"Канал N{a:00}–N{b:00} построен"); Refresh(); } };
+            hud.BuildLinkRequested += (a, b) => { if (!simulation.GameOver && simulation.BuildLink(a, b)) { hud.AddEvent($"Канал N{a:00}–N{b:00} построен"); map.SetBuildPreview(-1, Vector3.zero); Refresh(); } };
             hud.UpgradeLinkRequested += id => { if (!simulation.GameOver && simulation.UpgradeLink(id)) { hud.AddEvent("Модернизирован канал #" + id); Refresh(); } };
             hud.RepairLinkRequested += id => { if (!simulation.GameOver && simulation.RepairLink(id)) { hud.AddEvent("Ремонт канала #" + id + " начат"); Refresh(); } };
             hud.NextLevelRequested += OnNextLevel;
@@ -115,6 +115,14 @@ namespace NetworkCollapse
             if (Input.GetKeyDown(KeyCode.R)) ResetGame();
             if (Input.GetKeyDown(KeyCode.B) && hud.SelectedId >= 0) selectingTarget = true;
             if (Input.GetKeyDown(KeyCode.Escape)) { selectingTarget = false; if (hud.BuildMode) hud.SetBuildMode(false); }
+
+            if ((hud.BuildMode || selectingTarget) && hud.SelectedId >= 0)
+            {
+                Vector3 pointer = cameraController.ScreenWorld(Input.mousePosition);
+                int hover = overPanel ? -1 : map.HitTest(pointer);
+                map.SetBuildPreview(hud.SelectedId, pointer, hover >= 0 ? hover : hud.TargetId);
+            }
+            else map.SetBuildPreview(-1, Vector3.zero);
 
             if (Input.GetMouseButtonDown(0) && !overPanel)
             {

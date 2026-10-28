@@ -37,10 +37,10 @@ namespace NetworkCollapse
             hud.DeviceAction += OnDeviceAction;
             hud.RandomFailureRequested += RandomFailure;
             hud.ResetRequested += ResetGame;
-            hud.IncidentRequested += type => { simulation.StartIncident(type); Refresh(); };
-            hud.BuildLinkRequested += (a, b) => { if (simulation.BuildLink(a, b)) Refresh(); };
-            hud.UpgradeLinkRequested += id => { if (simulation.UpgradeLink(id)) Refresh(); };
-            hud.RepairLinkRequested += id => { if (simulation.RepairLink(id)) Refresh(); };
+            hud.IncidentRequested += type => { if (simulation.GameOver) return; simulation.StartIncident(type); hud.AddEvent("Сценарий: " + type); Refresh(); };
+            hud.BuildLinkRequested += (a, b) => { if (!simulation.GameOver && simulation.BuildLink(a, b)) { hud.AddEvent($"Канал N{a:00}–N{b:00} построен"); Refresh(); } };
+            hud.UpgradeLinkRequested += id => { if (!simulation.GameOver && simulation.UpgradeLink(id)) { hud.AddEvent("Модернизирован канал #" + id); Refresh(); } };
+            hud.RepairLinkRequested += id => { if (!simulation.GameOver && simulation.RepairLink(id)) { hud.AddEvent("Ремонт канала #" + id + " начат"); Refresh(); } };
             hud.NextLevelRequested += OnNextLevel;
             ResetGame();
         }
@@ -53,6 +53,7 @@ namespace NetworkCollapse
             map.Initialize(simulation);
             hud.Initialize(simulation);
             hud.Select(-1);
+            hud.AddEvent("Диспетчерская запущена");
             cameraController.ResetView();
         }
 
@@ -67,19 +68,25 @@ namespace NetworkCollapse
             map.Initialize(simulation);
             hud.Initialize(simulation);
             hud.Select(-1);
+            hud.AddEvent("Уровень " + simulation.Level + " запущен");
             cameraController.ResetView();
         }
 
         private void RandomFailure()
         {
+            if (simulation.GameOver) return;
             simulation.RandomFailure();
+            hud.AddEvent("Авария: " + simulation.LastScenario);
             Refresh();
         }
 
         private void OnDeviceAction(int id)
         {
-            if (simulation.ToggleFailure(id))
+            if (!simulation.GameOver && simulation.ToggleFailure(id))
+            {
+                hud.AddEvent("Действие с узлом N" + id.ToString("00"));
                 Refresh();
+            }
         }
 
         private void Refresh()

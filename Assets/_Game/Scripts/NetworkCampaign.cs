@@ -31,6 +31,7 @@ namespace NetworkCollapse
         public string ChapterTitle => Chapter == 0 ? "ACT I / BLACKOUT" : Chapter == 1 ? "ACT II / THE BACKBONE" : "ACT III / SHADOW TRAFFIC";
         public StoryMission Current => Chapter < Missions.Count ? Missions[Chapter] : null;
         public event Action<string> Notification;
+        public event Action<int> CreditsAwarded;
         public NetworkCampaign()
         {
             Missions.Add(new StoryMission { Id="m1", Title="Первый сигнал", Briefing="Удерживайте доступность сети не ниже 70% на 3 тактах.", Kind=MissionKind.RestoreAvailability, Target=3, Reward=30 });
@@ -77,6 +78,7 @@ namespace NetworkCollapse
             var mission = Current;
             if (mission == null || mission.Progress < mission.Target) return;
             mission.Completed = true;
+            CreditsAwarded?.Invoke(mission.Reward);
             Notification?.Invoke("Задание выполнено: " + mission.Title + " / +" + mission.Reward + " кр.");
             Chapter++;
             if (Chapter == 2) Inventory.Find(x => x.Id == "reserve").Quantity++;

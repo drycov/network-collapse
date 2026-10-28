@@ -19,6 +19,9 @@ namespace NetworkCollapse
         public event Action<EquipmentTier?> FilterChanged;
         public event Action<bool> RouteVisibilityChanged;
         private Button routeButton;
+        private IntegerField vlanField, mtuField;
+        private Button adminToggle, routingToggle, applyConfig;
+        public event Action<int, int, int, bool, RoutingMode> ConfigureDeviceRequested;
         private bool routesVisible = true;
         private readonly System.Collections.Generic.List<string> events = new System.Collections.Generic.List<string>();
 
@@ -99,6 +102,17 @@ namespace NetworkCollapse
             right.Add(title);
             details = Body("Выберите узел на карте.");
             right.Add(details);
+            right.Add(Heading("КОНФИГУРАЦИЯ УСТРОЙСТВА", 14));
+            vlanField = new IntegerField("VLAN ID");
+            mtuField = new IntegerField("MTU");
+            right.Add(vlanField);
+            right.Add(mtuField);
+            adminToggle = ActionButton("Административно: включено", () => { if (SelectedId < 0) return; desiredAdmin = !desiredAdmin; UpdateConfigButtons(); });
+            routingToggle = ActionButton("Routing: Static", () => { if (SelectedId < 0) return; desiredRouting = desiredRouting == RoutingMode.Static ? RoutingMode.OspfSimulated : RoutingMode.Static; UpdateConfigButtons(); });
+            applyConfig = ActionButton("Применить настройки", () => ConfigureDeviceRequested?.Invoke(SelectedId, vlanField.value, mtuField.value, desiredAdmin, desiredRouting));
+            right.Add(adminToggle);
+            right.Add(routingToggle);
+            right.Add(applyConfig);
             failure = ActionButton("Создать аварию", () => DeviceAction?.Invoke(SelectedId));
             repair = ActionButton("Ремонт узла (15)", () => DeviceAction?.Invoke(SelectedId));
             right.Add(failure);
@@ -175,6 +189,14 @@ namespace NetworkCollapse
             Refresh();
         }
 
+        private bool desiredAdmin = true;
+        private RoutingMode desiredRouting = RoutingMode.Static;
+        private void UpdateConfigButtons()
+        {
+            adminToggle.text = desiredAdmin ? "Административно: включено" : "Административно: выключено";
+            routingToggle.text = "Routing: " + desiredRouting;
+        }
+
         public void SelectLink(int index)
         {
             SelectedId = -1;
@@ -197,6 +219,15 @@ namespace NetworkCollapse
             TargetId = -1;
             SelectedLinkId = -1;
             SelectedId = id;
+            if (model != null && id >= 0 && id < model.Nodes.Count)
+            {
+                var node = model.Nodes[id];
+                vlanField.SetValueWithoutNotify(node.VlanId);
+                mtuField.SetValueWithoutNotify(node.Mtu);
+                desiredAdmin = node.AdminEnabled;
+                desiredRouting = node.Routing;
+                UpdateConfigButtons();
+            }
             Refresh();
         }
 
@@ -228,6 +259,11 @@ namespace NetworkCollapse
             repairLink.SetEnabled(false);
 
             bool valid = SelectedId >= 0 && SelectedId < model.Nodes.Count;
+            vlanField.SetEnabled(valid && !model.GameOver);
+            mtuField.SetEnabled(valid && !model.GameOver);
+            adminToggle.SetEnabled(valid && !model.GameOver);
+            routingToggle.SetEnabled(valid && !model.GameOver && model.Nodes[SelectedId].Role != DeviceRole.Layer2Switch);
+            applyConfig.SetEnabled(valid && !model.GameOver);
             failure.style.display = valid && !model.Nodes[SelectedId].Failed ? DisplayStyle.Flex : DisplayStyle.None;
             repair.style.display = valid && model.Nodes[SelectedId].Failed ? DisplayStyle.Flex : DisplayStyle.None;
 
@@ -268,9 +304,10 @@ namespace NetworkCollapse
             }
 
             var node = model.Nodes[SelectedId];
-            title.text = $"УЗЕЛ N{node.Id:00} · {node.Tier}";
+            title.text = $"{node.Hostname} · {node.Tier}";
             string repairInfo = node.RepairRemaining > 0f ? $"\nРемонт: {node.RepairRemaining:0.0} с" : "";
             details.text =
+                $"Роль: {node.Role} | Управление: {node.ManagementIp}\\nVLAN: {node.VlanId} | MTU: {node.Mtu} | Routing: {node.Routing}\\n" +
                 $"Состояние: {node.Status}{repairInfo}\n" +
                 $"Нагрузка: {node.Load:0.0} / {node.Capacity:0.0}\n" +
                 $"Потребление: {node.Demand:0.0}\n" +

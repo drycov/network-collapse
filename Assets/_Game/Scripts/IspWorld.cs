@@ -147,7 +147,7 @@ namespace NetworkCollapse
             foreach (var route in Routes)
                 lines.Add((route.Reachable ? "BEST" : "DOWN") + " " + route.Prefix +
                     "  AS_PATH " + route.AsPath + "  LP " + route.LocalPreference);
-            return lines.Count == 0 ? "Нет установленных BGP-соседей" : string.Join("\\n", lines);
+            return lines.Count == 0 ? "Нет установленных BGP-соседей" : string.Join("\n", lines);
         }
 
         public string OpenCity(NetworkSimulation network, int index)

@@ -10,7 +10,13 @@ namespace NetworkCollapse
         private UIDocument document;
         private PanelSettings panelSettings;
         private Label kpis, details, title;
-        private Button repair, failure;
+        private Button repair, failure, build, upgrade, repairLink;
+        private Label connectionInfo;
+        public event Action<int, int> BuildLinkRequested;
+        public event Action<int> UpgradeLinkRequested;
+        public event Action<int> RepairLinkRequested;
+        public event Action<IncidentScenario> IncidentRequested;
+        public int TargetId { get; private set; } = -1;
         public event Action<int> DeviceAction;
         public event Action RandomFailureRequested;
         public event Action ResetRequested;
@@ -51,6 +57,10 @@ namespace NetworkCollapse
             left.Add(Heading("УПРАВЛЕНИЕ", 15));
             left.Add(ActionButton("Случайная авария  [SPACE]", () => RandomFailureRequested?.Invoke()));
             left.Add(ActionButton("Начать заново  [R]", () => ResetRequested?.Invoke()));
+            left.Add(Heading("СЦЕНАРИИ АВАРИЙ", 15));
+            left.Add(ActionButton("Обрыв волокна", () => IncidentRequested?.Invoke(IncidentScenario.FiberCut)));
+            left.Add(ActionButton("Отказ питания", () => IncidentRequested?.Invoke(IncidentScenario.PowerFailure)));
+            left.Add(ActionButton("Каскадный сбой", () => IncidentRequested?.Invoke(IncidentScenario.Cascade)));
             left.Add(Body("ЛКМ — выбрать устройство\nПКМ / СКМ — панорама\nКолесо — масштаб\nF — центрировать карту"));
 
             var right = Panel(286);
@@ -63,6 +73,15 @@ namespace NetworkCollapse
             repair = ActionButton("Восстановить (15)", () => DeviceAction?.Invoke(SelectedId));
             right.Add(failure);
             right.Add(repair);
+            right.Add(Heading("КАНАЛЫ СВЯЗИ", 15));
+            connectionInfo = Body("Выберите узел, затем нажмите B и выберите второй.");
+            right.Add(connectionInfo);
+            build = ActionButton("Построить канал (35)", () => BuildLinkRequested?.Invoke(SelectedId, TargetId));
+            upgrade = ActionButton("Улучшить канал (25)", () => UpgradeLinkRequested?.Invoke(FindSelectedLink()));
+            repairLink = ActionButton("Восстановить канал (15)", () => RepairLinkRequested?.Invoke(FindSelectedLink()));
+            right.Add(build);
+            right.Add(upgrade);
+            right.Add(repairLink);
             Refresh();
         }
 
@@ -74,6 +93,8 @@ namespace NetworkCollapse
             panel.style.paddingRight = 16;
             panel.style.paddingTop = 17;
             panel.style.paddingBottom = 17;
+            panel.style.maxHeight = Length.Percent(96);
+            panel.style.overflow = Overflow.Hidden;
             panel.style.backgroundColor = new Color(.045f, .073f, .12f, .94f);
             panel.style.borderTopLeftRadius = panel.style.borderTopRightRadius = 12;
             panel.style.borderBottomLeftRadius = panel.style.borderBottomRightRadius = 12;
@@ -110,8 +131,17 @@ namespace NetworkCollapse
             return button;
         }
 
+        public void SelectTarget(int id)
+        {
+            TargetId = id;
+            Refresh();
+        }
+
+        private int FindSelectedLink() => model == null ? -1 : model.FindLink(SelectedId, TargetId);
+
         public void Select(int id)
         {
+            TargetId = -1;
             SelectedId = id;
             Refresh();
         }
@@ -123,7 +153,13 @@ namespace NetworkCollapse
             bool valid = SelectedId >= 0 && SelectedId < model.Nodes.Count;
             failure.style.display = valid && !model.Nodes[SelectedId].Failed ? DisplayStyle.Flex : DisplayStyle.None;
             repair.style.display = valid && model.Nodes[SelectedId].Failed ? DisplayStyle.Flex : DisplayStyle.None;
-            repair.SetEnabled(valid && model.Money >= 15);
+            repair.SetEnabled(valid && model.Money >= NetworkSimulation.RepairCost);
+            int index = FindSelectedLink();
+            bool pair = valid && TargetId >= 0 && TargetId != SelectedId;
+            build.SetEnabled(pair && index < 0 && model.Money >= NetworkSimulation.BuildCost);
+            upgrade.SetEnabled(pair && index >= 0 && !model.Links[index].Failed && model.Money >= NetworkSimulation.UpgradeCost && model.Links[index].Capacity < 240);
+            repairLink.SetEnabled(pair && index >= 0 && model.Links[index].Failed && model.Money >= NetworkSimulation.RepairCost);
+            connectionInfo.text = !pair ? "Нажмите B и выберите второй узел." : index < 0 ? $"N{SelectedId:00} → N{TargetId:00}: канал отсутствует" : $"N{SelectedId:00} ↔ N{TargetId:00}: {model.Links[index].Load:0.0}/{model.Links[index].Capacity:0.0} Mbps";
             if (!valid)
             {
                 title.text = "ОБОРУДОВАНИЕ";
@@ -132,7 +168,7 @@ namespace NetworkCollapse
             }
             var node = model.Nodes[SelectedId];
             title.text = $"УЗЕЛ N{node.Id:00}";
-            details.text = $"Состояние: {node.Status}\nНагрузка: {node.Load:0.0} / {node.Capacity:0.0}\nПотребление: {node.Demand:0.0}\nСоединений: {model.Links.FindAll(l => l.A == node.Id || l.B == node.Id).Count}\n\nДействия применяются только кнопкой ниже.";
+            details.text = $"Категория: {node.Tier}\nСостояние: {node.Status}\nНагрузка: {node.Load:0.0} / {node.Capacity:0.0}\nПотребление: {node.Demand:0.0}\nСоединений: {model.Links.FindAll(l => l.A == node.Id || l.B == node.Id).Count}\n\nДействия применяются только кнопкой ниже.";
         }
 
         private void OnDestroy() { if (panelSettings != null) Destroy(panelSettings); }

@@ -70,6 +70,7 @@ namespace NetworkCollapse
                 if (simulation.ExpandNetwork())
                 {
                     map.Initialize(simulation);
+                    cameraController.FrameNetwork(simulation);
                     hud.Select(-1);
                     hud.AddEvent("Новый район подключён. Узлов: " + simulation.Nodes.Count);
                     SaveCampaign(); Refresh();
@@ -222,7 +223,7 @@ namespace NetworkCollapse
             hud.AddEvent(campaign.StoryBriefing);
             lastVoicedChapter = campaign.Chapter;
             audio.PlayVoice("mission_" + (campaign.Chapter + 1));
-            cameraController.ResetView();
+            cameraController.FrameNetwork(simulation);
         }
 
         private void OnNextLevel()

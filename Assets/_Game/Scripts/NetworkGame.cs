@@ -15,7 +15,7 @@ namespace NetworkCollapse
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void Launch()
         {
-            if (FindFirstObjectByType<NetworkGame>() == null)
+            if (FindAnyObjectByType<NetworkGame>() == null)
                 new GameObject("Network Collapse — Bootstrap").AddComponent<NetworkGame>();
         }
 
@@ -34,7 +34,8 @@ namespace NetworkCollapse
             gameCamera.transform.position = new Vector3(0, 0, -20);
             gameCamera.backgroundColor = new Color(0.035f, 0.055f, 0.095f);
             pixel = new Texture2D(1, 1);
-            pixel.SetPixel(0, 0, Texture2D.white); pixel.Apply();
+            pixel.SetPixel(0, 0, Color.white); 
+            pixel.Apply();
             header = new GUIStyle { fontSize = 24, fontStyle = FontStyle.Bold, normal = { textColor = Color.white } };
             label = new GUIStyle { fontSize = 16, normal = { textColor = new Color(0.75f, 0.88f, 0.97f) } };
             // GUI.skin is available only during OnGUI.

@@ -10,7 +10,12 @@ namespace NetworkCollapse
         private UIDocument document;
         private PanelSettings panelSettings;
         private ThemeStyleSheet runtimeTheme;
-        private Label kpis, details, title, objectiveLabel, statusBar;
+        private Label kpis, details, title, objectiveLabel, statusBar, alertBanner, footerStatus;
+        private VisualElement endingOverlay;
+        private Label endingTitle, endingDescription;
+        private ProgressBar availabilityBar, objectiveBar;
+        private Button pauseButton;
+        public event Action PauseRequested;
         private Button repair, failure, build, upgrade, repairLink, nextLevel;
         private Label connectionInfo, eventLog, missionLabel, storyLabel, achievementLabel, inventoryLabel, boardLabel, incidentLabel, dialogueLabel;
         public event Action<int> UpgradeDeviceRequested;
@@ -90,6 +95,16 @@ namespace NetworkCollapse
             statusBar.style.marginTop = 8;
             top.Add(statusBar);
             root.Add(top);
+            alertBanner = Heading("", 12);
+            alertBanner.style.position = Position.Absolute;
+            alertBanner.style.top = 45;
+            alertBanner.style.left = 350;
+            alertBanner.style.right = 360;
+            alertBanner.style.unityTextAlign = TextAnchor.MiddleCenter;
+            alertBanner.style.backgroundColor = new Color(.06f, .17f, .20f, .95f);
+            alertBanner.style.paddingTop = 5;
+            alertBanner.style.paddingBottom = 5;
+            root.Add(alertBanner);
 
             var left = Panel(328);
             root.Add(left);
@@ -97,6 +112,8 @@ namespace NetworkCollapse
             left.Add(Heading("ACCESS NETWORK OPS", 11));
             kpis = Body("");
             left.Add(kpis);
+            availabilityBar = MakeProgress("ДОСТУПНОСТЬ"); left.Add(availabilityBar);
+            objectiveBar = MakeProgress("ЦЕЛЬ УРОВНЯ"); left.Add(objectiveBar);
             objectiveLabel = Body("");
             left.Add(objectiveLabel);
 
@@ -134,6 +151,8 @@ namespace NetworkCollapse
             routeButton = ActionButton("Маршруты: включены", () => { routesVisible = !routesVisible; RouteVisibilityChanged?.Invoke(routesVisible); Refresh(); });
             operationsTab.Add(routeButton);
             operationsTab.Add(ActionButton("Случайная авария  [SPACE]", () => RandomFailureRequested?.Invoke()));
+            pauseButton = ActionButton("ПАУЗА  [P]", () => PauseRequested?.Invoke());
+            operationsTab.Add(pauseButton);
             operationsTab.Add(ActionButton("Начать заново  [R]", () => ResetRequested?.Invoke()));
             nextLevel = ActionButton("Следующий уровень", () => NextLevelRequested?.Invoke());
             operationsTab.Add(nextLevel);
@@ -206,9 +225,50 @@ namespace NetworkCollapse
             right.Add(build);
             right.Add(upgrade);
             right.Add(repairLink);
+            endingOverlay = new VisualElement();
+            endingOverlay.style.position = Position.Absolute;
+            endingOverlay.style.left = Length.Percent(35);
+            endingOverlay.style.top = Length.Percent(29);
+            endingOverlay.style.width = Length.Percent(30);
+            endingOverlay.style.paddingTop = 22;
+            endingOverlay.style.paddingBottom = 22;
+            endingOverlay.style.paddingLeft = 22;
+            endingOverlay.style.paddingRight = 22;
+            endingOverlay.style.backgroundColor = new Color(.015f, .08f, .11f, .98f);
+            endingOverlay.style.borderTopWidth = 2;
+            endingOverlay.style.borderTopColor = new Color(.28f, .89f, .78f);
+            endingTitle = Heading("", 21); endingOverlay.Add(endingTitle);
+            endingDescription = Body(""); endingOverlay.Add(endingDescription);
+            endingOverlay.Add(ActionButton("НАЧАТЬ НОВУЮ СМЕНУ", () => ResetRequested?.Invoke()));
+            root.Add(endingOverlay);
+            footerStatus = Body("");
+            footerStatus.style.position = Position.Absolute;
+            footerStatus.style.bottom = 3;
+            footerStatus.style.left = 360;
+            footerStatus.style.right = 360;
+            footerStatus.style.unityTextAlign = TextAnchor.MiddleCenter;
+            root.Add(footerStatus);
             ShowTab(activeTab);
             Refresh();
             if (eventLog != null) eventLog.text = string.Join("\n", events);
+        }
+
+        private static ProgressBar MakeProgress(string label)
+        {
+            var bar = new ProgressBar { title = label };
+            bar.lowValue = 0;
+            bar.highValue = 100;
+            bar.style.height = 26;
+            bar.style.marginBottom = 9;
+            bar.style.flexShrink = 0;
+            bar.style.color = new Color(.45f, .98f, .84f);
+            return bar;
+        }
+
+        public void SetPaused(bool paused)
+        {
+            if (pauseButton != null) pauseButton.text = paused ? "ПРОДОЛЖИТЬ  [P]" : "ПАУЗА  [P]";
+            if (footerStatus != null) footerStatus.text = paused ? "● СИМУЛЯЦИЯ ПРИОСТАНОВЛЕНА" : "● ОПЕРАТОР НА ЛИНИИ   |   ЛКМ: ВЫБОР   |   КОЛЕСО: МАСШТАБ   |   F: ЦЕНТР";
         }
 
         private static VisualElement Panel(float width)
@@ -370,6 +430,13 @@ namespace NetworkCollapse
         public void Refresh()
         {
             if (model == null || kpis == null) return;
+            availabilityBar.value = model.Availability * 100f;
+            objectiveBar.value = model.ObjectiveTimer <= 0 ? 0 : Mathf.Clamp01(model.ObjectiveProgress / model.ObjectiveTimer) * 100f;
+            alertBanner.text = model.GameOver ? "КРИТИЧЕСКАЯ ПОТЕРЯ СВЯЗНОСТИ" : model.FailedNodes + model.FailedLinks > 0 ? "АКТИВНЫЕ АВАРИИ: " + (model.FailedNodes + model.FailedLinks) : "СЕТЬ РАБОТАЕТ ШТАТНО";
+            alertBanner.style.color = model.GameOver ? new Color(1f, .32f, .32f) : model.FailedNodes + model.FailedLinks > 0 ? new Color(1f, .69f, .3f) : new Color(.36f, .95f, .79f);
+            endingOverlay.style.display = model.GameOver ? DisplayStyle.Flex : DisplayStyle.None;
+            endingTitle.text = model.GameOver ? "NETWORK COLLAPSE" : "";
+            endingDescription.text = model.GameOver ? "Сеть потеряла устойчивость. Восстановите управление, начав новую смену.\nИтоговый счёт: " + model.Score : "";
 
             if (campaign != null)
             {

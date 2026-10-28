@@ -591,7 +591,10 @@ namespace NetworkCollapse
 
             int index = ActiveLink();
             bool pair = (valid && TargetId >= 0 && TargetId != SelectedId) || SelectedLinkId >= 0;
-            build.SetEnabled(!model.GameOver && valid && pair && index < 0 && model.Money >= NetworkSimulation.BuildCost);
+            string buildError = valid && TargetId >= 0 ? model.BuildBlockReason(SelectedId, TargetId) : "Выберите два узла";
+            int quote = valid && TargetId >= 0 ? model.GetBuildCost(SelectedId, TargetId) : NetworkSimulation.BuildCost;
+            build.text = "ПРОЛОЖИТЬ ЛИНИЮ (" + quote + " кр.)";
+            build.SetEnabled(valid && TargetId >= 0 && buildError == null);
             upgrade.SetEnabled(!model.GameOver && pair && index >= 0 && !model.Links[index].Failed &&
                                model.Money >= NetworkSimulation.UpgradeCost && model.Links[index].Capacity < 240);
 
@@ -608,7 +611,7 @@ namespace NetworkCollapse
                 : !pair
                     ? "Включите режим строительства и выберите два узла."
                     : index < 0
-                        ? $"N{SelectedId:00} → N{TargetId:00}: канала нет"
+                        ? $"ПРОЕКТ: N{SelectedId:00} → N{TargetId:00}\nДлина: {Vector2.Distance(model.Nodes[SelectedId].Position, model.Nodes[TargetId].Position):0.0} ед.\nСмета: {quote} кр.\nСтатус: {(buildError ?? "Готов к строительству")}"
                         : $"N{SelectedId:00} ↔ N{TargetId:00}: {model.Links[index].Load:0.0}/{model.Links[index].Capacity:0.0}";
 
             if (!valid)

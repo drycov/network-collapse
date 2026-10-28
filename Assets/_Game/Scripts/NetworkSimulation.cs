@@ -271,6 +271,26 @@ namespace NetworkCollapse
             return true;
         }
 
+        public string ScanNetwork()
+        {
+            var problems = new List<string>();
+            foreach (var node in Nodes)
+            {
+                if (node.Failed) problems.Add(node.Hostname + ": отказ оборудования");
+                else if (!node.AdminEnabled) problems.Add(node.Hostname + ": admin down");
+                else if (node.Status == NodeStatus.Overloaded) problems.Add(node.Hostname + ": перегрузка");
+            }
+            for (int index = 0; index < Links.Count; index++)
+            {
+                var link = Links[index];
+                if (link.Failed) problems.Add("Канал #" + index + ": авария трассы");
+                else if (link.ConstructionRemaining > 0f) problems.Add("Канал #" + index + ": монтаж " + link.ConstructionRemaining.ToString("0.0") + "с");
+                else if (link.Capacity > 0 && link.Load / link.Capacity > .9f) problems.Add("Канал #" + index + ": загрузка более 90%");
+            }
+            return problems.Count == 0 ? "NOC: активных неисправностей не обнаружено" :
+                "NOC: обнаружено " + problems.Count + " событий. " + string.Join("; ", problems.GetRange(0, Mathf.Min(6, problems.Count)));
+        }
+
         public string Diagnose(int nodeId)
         {
             if (nodeId < 0 || nodeId >= Nodes.Count) return "Выберите устройство для диагностики";

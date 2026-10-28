@@ -12,7 +12,9 @@ namespace NetworkCollapse
         private ThemeStyleSheet runtimeTheme;
         private Label kpis, details, title, objectiveLabel, statusBar;
         private Button repair, failure, build, upgrade, repairLink, nextLevel;
-        private Label connectionInfo, eventLog;
+        private Label connectionInfo, eventLog, missionLabel, achievementLabel, inventoryLabel;
+        private NetworkCampaign campaign;
+        public event Action<string> UseInventoryRequested;
         private Button modeButton;
         public bool BuildMode { get; private set; }
         public int SelectedLinkId { get; private set; } = -1;
@@ -110,6 +112,14 @@ namespace NetworkCollapse
             left.Add(ActionButton("Обрыв волокна", () => IncidentRequested?.Invoke(IncidentScenario.FiberCut)));
             left.Add(ActionButton("Отказ питания", () => IncidentRequested?.Invoke(IncidentScenario.PowerFailure)));
             left.Add(ActionButton("Каскадный сбой", () => IncidentRequested?.Invoke(IncidentScenario.Cascade)));
+            left.Add(Heading("MISSION CONTROL / СЮЖЕТ", 14));
+            missionLabel = Body(""); left.Add(missionLabel);
+            left.Add(Heading("ДОСТИЖЕНИЯ", 14));
+            achievementLabel = Body(""); left.Add(achievementLabel);
+            left.Add(Heading("ИНВЕНТАРЬ", 14));
+            inventoryLabel = Body(""); left.Add(inventoryLabel);
+            left.Add(ActionButton("Использовать ремонтный комплект", () => UseInventoryRequested?.Invoke("repair")));
+            left.Add(ActionButton("Использовать трансивер", () => UseInventoryRequested?.Invoke("reserve")));
             left.Add(Heading("ЖУРНАЛ СОБЫТИЙ", 14));
             eventLog = Body("");
             left.Add(eventLog);
@@ -208,6 +218,12 @@ namespace NetworkCollapse
             return button;
         }
 
+        public void SetCampaign(NetworkCampaign value)
+        {
+            campaign = value;
+            Refresh();
+        }
+
         public void AddEvent(string message)
         {
             events.Insert(0, $"[{DateTime.Now:HH:mm:ss}] {message}");
@@ -267,6 +283,12 @@ namespace NetworkCollapse
         public void Refresh()
         {
             if (model == null || kpis == null) return;
+            if (campaign != null)
+            {
+                missionLabel.text = campaign.MissionText();
+                achievementLabel.text = campaign.AchievementText();
+                inventoryLabel.text = campaign.InventoryText();
+            }
             statusBar.text = $"NETWORK COLLAPSE   /   NETOPS   /   LVL {model.Level:00}   /   {(model.GameOver ? "CRITICAL" : "LINK ACTIVE")}";
             modeButton.text = BuildMode ? "Режим строительства: ВКЛ" : "Режим строительства: выкл.";
             routeButton.text = routesVisible ? "Маршруты: включены" : "Маршруты: скрыты";

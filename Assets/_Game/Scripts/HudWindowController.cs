@@ -42,6 +42,7 @@ namespace NetworkCollapse
                 // CloneTree creates a template container; move its frame into the overlay.
                 frame.RemoveFromHierarchy();
             }
+            HudViewAssets.AttachViewStyle(frame, "Window");
             overlay.Add(frame);
             root.Add(overlay);
             overlay.style.display = DisplayStyle.None;
@@ -84,6 +85,11 @@ namespace NetworkCollapse
             if (style != null && !root.styleSheets.Contains(style)) root.styleSheets.Add(style);
             else if (style == null) Debug.LogWarning("NetworkUI/NetworkHud.uss not found");
         }
+        public static void AttachViewStyle(VisualElement element, string asset)
+        {
+            var sheet = Resources.Load<StyleSheet>("NetworkUI/" + asset);
+            if (sheet != null && !element.styleSheets.Contains(sheet)) element.styleSheets.Add(sheet);
+        }
         public static VisualElement Instantiate(string asset, string namedRoot)
         {
             var tree = Resources.Load<VisualTreeAsset>("NetworkUI/" + asset);
@@ -94,7 +100,11 @@ namespace NetworkCollapse
             }
             var clone = tree.CloneTree();
             var target = clone.Q<VisualElement>(namedRoot);
-            if (target != null) target.RemoveFromHierarchy();
+            if (target != null)
+            {
+                target.RemoveFromHierarchy();
+                AttachViewStyle(target, asset);
+            }
             return target;
         }
     }

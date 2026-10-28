@@ -107,3 +107,7 @@ The map now draws original procedural device glyphs: router directional arrows, 
 A six-objective story campaign tracks availability, new links, repairs, upgrades, survival after a simulated outage and device configuration. Four achievements and two consumable inventory items are displayed in the operations HUD. Mission credit rewards are applied to the simulation. Campaign state currently resets when starting a new game; persistence and saved profiles remain future work. Missions and achievements are a lightweight first playable narrative, not a complete authored branching campaign.
 
 Unverified: this change has not been compiled, visually inspected or tested in the Unity Editor or Web build.
+
+## Operations console UI upgrade
+
+The runtime console has two progress gauges (availability and level objective), a live failure banner, a selected equipment/link utilization gauge, and an overlay shown on game over. Pause/resume uses **P** or the in-game control; simulation ticks stop while paused. **1 / 2 / 3** switch between Network, Missions, and Inventory screens. These are foundation pieces for a more game-ready HUD, not a complete production-ready game. The Unity 6 runtime compilation, responsive layout and visual behavior must still be validated in Editor, standalone and Web builds.

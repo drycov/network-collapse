@@ -12,7 +12,7 @@ namespace NetworkCollapse
         private ThemeStyleSheet runtimeTheme;
         private Label kpis, details, title, objectiveLabel, statusBar;
         private Button repair, failure, build, upgrade, repairLink, nextLevel;
-        private Label connectionInfo, eventLog, missionLabel, achievementLabel, inventoryLabel;
+        private Label connectionInfo, eventLog, missionLabel, storyLabel, achievementLabel, inventoryLabel;
         private NetworkCampaign campaign;
         public event Action<string> UseInventoryRequested;
         private Button modeButton;
@@ -41,7 +41,7 @@ namespace NetworkCollapse
 
         public bool IsPointerOverHud(Vector2 screen)
         {
-            return screen.x < 300 || screen.x > Screen.width - 310;
+            return screen.x < 340 || screen.x > Screen.width - 350;
         }
 
         public void Initialize(NetworkSimulation simulation)
@@ -66,38 +66,40 @@ namespace NetworkCollapse
             root.style.height = Length.Percent(100);
             root.style.paddingTop = 50;
             root.style.paddingBottom = 14;
-            root.style.paddingLeft = 14;
-            root.style.paddingRight = 14;
+            root.style.paddingLeft = 10;
+            root.style.paddingRight = 10;
             root.pickingMode = PickingMode.Ignore;
+
             var top = new VisualElement();
             top.style.position = Position.Absolute;
-            top.style.left = 14;
-            top.style.right = 14;
+            top.style.left = 10;
+            top.style.right = 10;
             top.style.top = 8;
-            top.style.height = 34;
-            top.style.backgroundColor = new Color(.035f, .13f, .18f, .97f);
-            top.style.borderBottomWidth = 1;
+            top.style.height = 36;
+            top.style.backgroundColor = new Color(.02f, .09f, .12f, 1f);
+            top.style.borderBottomWidth = 2;
             top.style.borderBottomColor = new Color(.13f, .72f, .78f);
             top.pickingMode = PickingMode.Ignore;
             statusBar = Heading("NETWORK COLLAPSE   /   OPERATIONS CONSOLE   /   SECURE LINK", 13);
             statusBar.style.marginLeft = 12;
-            statusBar.style.marginTop = 7;
+            statusBar.style.marginTop = 8;
             top.Add(statusBar);
             root.Add(top);
 
-            var left = Panel(290);
+            var left = Panel(328);
             root.Add(left);
             left.Add(Heading("NETWORK COLLAPSE", 20));
-            left.Add(Heading("СЕТЕВОЙ ОПЕРАТОР", 11));
+            left.Add(Heading("ACCESS NETWORK OPS", 11));
             kpis = Body("");
             left.Add(kpis);
             objectiveLabel = Body("");
             left.Add(objectiveLabel);
+
             left.Add(Heading("УПРАВЛЕНИЕ", 15));
             modeButton = ActionButton("Режим строительства: выкл.", () => { BuildMode = !BuildMode; BuildModeChanged?.Invoke(BuildMode); Refresh(); });
             left.Add(modeButton);
             left.Add(Heading("СЛОИ ТОПОЛОГИИ", 14));
-            left.Add(Body("CORE / жёлтый   DIST / синий   ACCESS / зелёный\nPRIMARY / жёлтый   BACKUP / фиолетовый\nFAULT / красный   REPAIR / оранжевый"));
+            left.Add(Body("ROUTER hex · L3 square · ACCESS ring\nCORE жёлтый · DIST синий · ACCESS зелёный\nPRIMARY жёлтый · BACKUP фиолетовый"));
             left.Add(ActionButton("Все категории", () => FilterChanged?.Invoke(null)));
             left.Add(ActionButton("Core", () => FilterChanged?.Invoke(EquipmentTier.Core)));
             left.Add(ActionButton("Distribution", () => FilterChanged?.Invoke(EquipmentTier.Distribution)));
@@ -108,24 +110,33 @@ namespace NetworkCollapse
             left.Add(ActionButton("Начать заново  [R]", () => ResetRequested?.Invoke()));
             nextLevel = ActionButton("Следующий уровень", () => NextLevelRequested?.Invoke());
             left.Add(nextLevel);
+
             left.Add(Heading("СЦЕНАРИИ АВАРИЙ", 14));
             left.Add(ActionButton("Обрыв волокна", () => IncidentRequested?.Invoke(IncidentScenario.FiberCut)));
             left.Add(ActionButton("Отказ питания", () => IncidentRequested?.Invoke(IncidentScenario.PowerFailure)));
             left.Add(ActionButton("Каскадный сбой", () => IncidentRequested?.Invoke(IncidentScenario.Cascade)));
+
             left.Add(Heading("MISSION CONTROL / СЮЖЕТ", 14));
-            missionLabel = Body(""); left.Add(missionLabel);
+            storyLabel = Body("");
+            left.Add(storyLabel);
+            missionLabel = Body("");
+            left.Add(missionLabel);
             left.Add(Heading("ДОСТИЖЕНИЯ", 14));
-            achievementLabel = Body(""); left.Add(achievementLabel);
+            achievementLabel = Body("");
+            left.Add(achievementLabel);
             left.Add(Heading("ИНВЕНТАРЬ", 14));
-            inventoryLabel = Body(""); left.Add(inventoryLabel);
-            left.Add(ActionButton("Использовать ремонтный комплект", () => UseInventoryRequested?.Invoke("repair")));
-            left.Add(ActionButton("Использовать трансивер", () => UseInventoryRequested?.Invoke("reserve")));
+            inventoryLabel = Body("");
+            left.Add(inventoryLabel);
+            left.Add(ActionButton("Ремонтный комплект", () => UseInventoryRequested?.Invoke("repair")));
+            left.Add(ActionButton("Резервный трансивер", () => UseInventoryRequested?.Invoke("reserve")));
+            left.Add(ActionButton("Патч-корд 10G", () => UseInventoryRequested?.Invoke("patch")));
+
             left.Add(Heading("ЖУРНАЛ СОБЫТИЙ", 14));
             eventLog = Body("");
             left.Add(eventLog);
-            left.Add(Body("ЛКМ — выбрать узел или канал\nРежим строительства — выбрать два узла\nПКМ/СКМ — панорама\nКолесо — масштаб · F — центр"));
+            left.Add(Body("ЛКМ — узел/канал\nСтроительство — два узла\nПКМ/СКМ — панорама · F — центр"));
 
-            var right = Panel(300);
+            var right = Panel(338);
             root.Add(right);
             title = Heading("ОБОРУДОВАНИЕ", 19);
             right.Add(title);
@@ -147,7 +158,7 @@ namespace NetworkCollapse
             right.Add(failure);
             right.Add(repair);
             right.Add(Heading("КАНАЛЫ СВЯЗИ", 15));
-            connectionInfo = Body("Выберите узел, затем B и второй узел.");
+            connectionInfo = Body("Выберите узел, затем второй в режиме строительства.");
             right.Add(connectionInfo);
             build = ActionButton("Построить канал (35)", () => BuildLinkRequested?.Invoke(SelectedId, TargetId));
             upgrade = ActionButton("Улучшить канал (25)", () => UpgradeLinkRequested?.Invoke(ActiveLink()));
@@ -163,13 +174,14 @@ namespace NetworkCollapse
         {
             var panel = new ScrollView(ScrollViewMode.Vertical);
             panel.style.width = width;
-            panel.style.paddingLeft = 16;
-            panel.style.paddingRight = 16;
-            panel.style.paddingTop = 17;
-            panel.style.paddingBottom = 17;
+            panel.style.paddingLeft = 14;
+            panel.style.paddingRight = 14;
+            panel.style.paddingTop = 14;
+            panel.style.paddingBottom = 14;
             panel.style.maxHeight = Length.Percent(96);
-            panel.style.backgroundColor = new Color(.017f, .065f, .09f, .96f);
-            panel.style.borderLeftWidth = 2;
+            // Fully opaque terminal panels (no alpha glass)
+            panel.style.backgroundColor = new Color(.012f, .05f, .07f, 1f);
+            panel.style.borderLeftWidth = 3;
             panel.style.borderLeftColor = new Color(.10f, .65f, .72f);
             panel.style.borderTopWidth = 1;
             panel.style.borderTopColor = new Color(.08f, .39f, .48f);
@@ -177,8 +189,8 @@ namespace NetworkCollapse
             panel.style.borderRightColor = new Color(.08f, .39f, .48f);
             panel.style.borderBottomWidth = 1;
             panel.style.borderBottomColor = new Color(.08f, .39f, .48f);
-            panel.style.borderTopLeftRadius = panel.style.borderTopRightRadius = 2;
-            panel.style.borderBottomLeftRadius = panel.style.borderBottomRightRadius = 2;
+            panel.style.borderTopLeftRadius = panel.style.borderTopRightRadius = 0;
+            panel.style.borderBottomLeftRadius = panel.style.borderBottomRightRadius = 0;
             return panel;
         }
 
@@ -188,26 +200,26 @@ namespace NetworkCollapse
             label.style.color = new Color(.37f, .96f, .86f);
             label.style.fontSize = size;
             label.style.unityFontStyleAndWeight = FontStyle.Bold;
-            label.style.marginBottom = 12;
+            label.style.marginBottom = 10;
             return label;
         }
 
         private static Label Body(string text)
         {
             var label = new Label(text);
-            label.style.color = new Color(.68f, .84f, .83f);
-            label.style.fontSize = 13;
+            label.style.color = new Color(.72f, .88f, .86f);
+            label.style.fontSize = 12;
             label.style.whiteSpace = WhiteSpace.Normal;
-            label.style.marginBottom = 12;
+            label.style.marginBottom = 10;
             return label;
         }
 
         private static Button ActionButton(string text, Action action)
         {
             var button = new Button(action) { text = text };
-            button.style.height = 36;
-            button.style.marginBottom = 8;
-            button.style.backgroundColor = new Color(.035f, .19f, .22f);
+            button.style.height = 34;
+            button.style.marginBottom = 7;
+            button.style.backgroundColor = new Color(.04f, .16f, .19f, 1f);
             button.style.color = new Color(.55f, 1f, .87f);
             button.style.borderLeftWidth = 2;
             button.style.borderLeftColor = new Color(.13f, .77f, .68f);
@@ -227,7 +239,7 @@ namespace NetworkCollapse
         public void AddEvent(string message)
         {
             events.Insert(0, $"[{DateTime.Now:HH:mm:ss}] {message}");
-            if (events.Count > 6) events.RemoveAt(events.Count - 1);
+            if (events.Count > 8) events.RemoveAt(events.Count - 1);
             if (eventLog != null) eventLog.text = string.Join("\n", events);
         }
 
@@ -283,13 +295,22 @@ namespace NetworkCollapse
         public void Refresh()
         {
             if (model == null || kpis == null) return;
+
             if (campaign != null)
             {
+                storyLabel.text = campaign.StoryBriefing;
                 missionLabel.text = campaign.MissionText();
                 achievementLabel.text = campaign.AchievementText();
                 inventoryLabel.text = campaign.InventoryText();
+                statusBar.text =
+                    $"NETWORK COLLAPSE  /  RANK {campaign.Rank}  /  REP {campaign.Reputation}  /  LVL {model.Level:00}  /  {(model.GameOver ? "CRITICAL" : "LINK ACTIVE")}";
             }
-            statusBar.text = $"NETWORK COLLAPSE   /   NETOPS   /   LVL {model.Level:00}   /   {(model.GameOver ? "CRITICAL" : "LINK ACTIVE")}";
+            else
+            {
+                statusBar.text =
+                    $"NETWORK COLLAPSE  /  NETOPS  /  LVL {model.Level:00}  /  {(model.GameOver ? "CRITICAL" : "LINK ACTIVE")}";
+            }
+
             modeButton.text = BuildMode ? "Режим строительства: ВКЛ" : "Режим строительства: выкл.";
             routeButton.text = routesVisible ? "Маршруты: включены" : "Маршруты: скрыты";
 
@@ -346,30 +367,39 @@ namespace NetworkCollapse
                 repairLink.text = $"Ремонт канала ({NetworkSimulation.LinkRepairCost})";
 
             connectionInfo.text = SelectedLinkId >= 0 && index >= 0 && index < model.Links.Count
-                ? $"Канал #{index}: N{model.Links[index].A:00} ↔ N{model.Links[index].B:00}\nНагрузка: {model.Links[index].Load:0.0}/{model.Links[index].Capacity:0.0}\nСостояние: {(model.Links[index].Failed ? "Авария" : "Работает")}\nПостроен игроком: {(model.Links[index].PlayerBuilt ? "Да" : "Нет")}" : !pair
-                ? "Нажмите B и выберите второй узел."
-                : index < 0
-                    ? $"N{SelectedId:00} → N{TargetId:00}: канала нет"
-                    : $"N{SelectedId:00} ↔ N{TargetId:00}: {model.Links[index].Load:0.0}/{model.Links[index].Capacity:0.0}";
+                ? $"Канал #{index}: N{model.Links[index].A:00} ↔ N{model.Links[index].B:00}\nНагрузка: {model.Links[index].Load:0.0}/{model.Links[index].Capacity:0.0}\nСостояние: {(model.Links[index].Failed ? "Авария" : "Работает")}\nПостроен игроком: {(model.Links[index].PlayerBuilt ? "Да" : "Нет")}"
+                : !pair
+                    ? "Включите режим строительства и выберите два узла."
+                    : index < 0
+                        ? $"N{SelectedId:00} → N{TargetId:00}: канала нет"
+                        : $"N{SelectedId:00} ↔ N{TargetId:00}: {model.Links[index].Load:0.0}/{model.Links[index].Capacity:0.0}";
 
             if (!valid)
             {
                 title.text = SelectedLinkId >= 0 ? "КАНАЛ СВЯЗИ" : "ОБОРУДОВАНИЕ";
-                details.text = SelectedLinkId >= 0 ? "Линия связи выбрана. Управление пропускной способностью и ремонт доступны ниже." : "Выберите узел на карте.\n\nДержите доступность выше цели, чтобы пройти уровень.";
+                details.text = SelectedLinkId >= 0
+                    ? "Линия связи выбрана. Upgrade / ремонт доступны ниже."
+                    : "Выберите узел.\n\nСюжетные задания — слева в Mission Control.";
                 return;
             }
 
             var node = model.Nodes[SelectedId];
-            title.text = $"{node.Hostname} · {node.Tier}";
+            title.text = $"{node.Hostname} · {node.Role}";
             string repairInfo = node.RepairRemaining > 0f ? $"\nРемонт: {node.RepairRemaining:0.0} с" : "";
-            string routes = model.PrimaryPaths.TryGetValue(node.Id, out var primary) ? $"\\nОсновной: {primary.Count} каналов, {model.PrimaryTraffic[node.Id]:0.0} Mbps" : "\\nОсновной: недоступен";
-            routes += model.BackupPaths.TryGetValue(node.Id, out var alternate) && model.BackupTraffic.TryGetValue(node.Id, out var amount) ? $"\\nРезерв/ECMP: {alternate.Count} каналов, {amount:0.0} Mbps" : "\\nРезерв: отсутствует";
+            string routes = model.PrimaryPaths.TryGetValue(node.Id, out var primary)
+                ? $"\nОсновной: {primary.Count} hop, {model.PrimaryTraffic[node.Id]:0.0} Mbps"
+                : "\nОсновной: недоступен";
+            if (model.BackupPaths.TryGetValue(node.Id, out var alternate) && model.BackupTraffic.TryGetValue(node.Id, out var amount))
+                routes += $"\nРезерв/ECMP: {alternate.Count} hop, {amount:0.0} Mbps";
+            else
+                routes += "\nРезерв: отсутствует";
+
             details.text =
-                $"Роль: {node.Role} | Управление: {node.ManagementIp}\nVLAN: {node.VlanId} | MTU: {node.Mtu} | Routing: {node.Routing}\n" +
+                $"Tier: {node.Tier} | IP: {node.ManagementIp}\n" +
+                $"VLAN: {node.VlanId} | MTU: {node.Mtu} | Routing: {node.Routing}\n" +
                 $"Состояние: {node.Status}{repairInfo}\n" +
                 $"Нагрузка: {node.Load:0.0} / {node.Capacity:0.0}\n" +
-                $"Потребление: {node.Demand:0.0}\n" +
-                $"Соединений: {model.Links.FindAll(l => l.A == node.Id || l.B == node.Id).Count}" + routes;
+                $"Demand: {node.Demand:0.0}" + routes;
         }
 
         private void OnDestroy()

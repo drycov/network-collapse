@@ -50,6 +50,8 @@ namespace NetworkCollapse
         private int marketCityIndex;
         private VisualElement geographicMap;
         private VisualElement windowLayer, currentWindow;
+        private VisualElement hudHeader, hudAlert;
+        private float lastLayoutWidth = -1f;
         public bool HasWindowOpen => windowLayer != null && windowLayer.style.display == DisplayStyle.Flex;
         private ScrollView windowContent;
         public event Action<int> PartnerConnectionRequested;
@@ -151,6 +153,7 @@ namespace NetworkCollapse
             alertBanner.style.paddingTop = 5;
             alertBanner.style.paddingBottom = 5;
             root.Add(alertBanner);
+            hudAlert = alertBanner;
 
             var left = Panel(328);
             leftDock = left;
@@ -547,13 +550,27 @@ namespace NetworkCollapse
         }
         private void AdjustLayout(VisualElement root)
         {
-            if (root.resolvedStyle.width < 200) return;
             float width = root.resolvedStyle.width;
-            float panelWidth = width < 1100 ? Mathf.Clamp(width * .24f, 195, 270) : 328;
-            var children = root.Children();
-            foreach (var element in children)
-                if (element is ScrollView scroll) scroll.style.width = panelWidth;
-            if (statusBar != null) statusBar.style.fontSize = width < 950 ? 10 : 13;
+            if (width < 200f || Mathf.Abs(width - lastLayoutWidth) < 2f) return;
+            lastLayoutWidth = width;
+            bool compact = width < 1100f;
+            float panelWidth = compact ? Mathf.Clamp(width * .25f, 190f, 260f) : 310f;
+            if (leftDock != null) leftDock.style.width = panelWidth;
+            if (rightDock != null) rightDock.style.width = panelWidth;
+            if (statusBar != null) statusBar.style.fontSize = width < 900f ? 10 : 13;
+            if (hudAlert != null)
+            {
+                hudAlert.style.left = panelWidth + 22f;
+                hudAlert.style.right = panelWidth + 22f;
+            }
+            if (currentWindow != null)
+            {
+                currentWindow.style.width = width < 800 ? Length.Percent(94) :
+                    width < 1300 ? Length.Percent(84) : Length.Percent(72);
+                currentWindow.style.maxWidth = 960;
+                currentWindow.style.height = Length.Percent(width < 800 ? 89 : 82);
+            }
+            if (mainMenuCard != null) mainMenuCard.style.maxWidth = Length.Percent(92);
         }
 
         public void SelectScreen(int screen)
@@ -575,6 +592,8 @@ namespace NetworkCollapse
             windowContent.style.flexGrow = 1;
             windowContent.style.flexShrink = 1;
             windowContent.style.minHeight = 0;
+            windowContent.style.flexBasis = 0;
+            windowContent.verticalScrollerVisibility = ScrollerVisibility.Auto;
             windowContent.style.overflow = Overflow.Hidden;
             windowContent.contentContainer.style.flexShrink = 0;
             windowContent.contentContainer.style.width = Length.Percent(100);
@@ -588,6 +607,7 @@ namespace NetworkCollapse
             frame.style.height = Length.Percent(82);
             frame.style.maxHeight = Length.Percent(88);
             frame.style.overflow = Overflow.Hidden;
+            frame.style.flexShrink = 1;
             frame.style.backgroundColor = new Color(.015f, .06f, .085f, 1f);
             frame.style.borderTopWidth = 2;
             frame.style.borderTopColor = new Color(.24f, .78f, .71f);
@@ -607,6 +627,7 @@ namespace NetworkCollapse
             windowLayer.Add(frame);
             root.Add(windowLayer);
             windowLayer.style.display = DisplayStyle.None;
+            AdjustLayout(root);
         }
 
         private void ShowTab(string tab)
@@ -619,6 +640,7 @@ namespace NetworkCollapse
             if (tab == "operations")
             {
                 windowLayer.style.display = DisplayStyle.None;
+                windowContent.Clear();
                 return;
             }
             VisualElement content = tab == "missions" ? missionsTab :
@@ -874,6 +896,8 @@ namespace NetworkCollapse
         public void Refresh()
         {
             if (model == null || kpis == null) return;
+            if (windowLayer != null && windowLayer.style.display == DisplayStyle.Flex && windowContent != null)
+                windowContent.style.minHeight = 0;
             if (rightDock != null && !menuOpen) rightDock.style.display = SelectedId >= 0 || SelectedLinkId >= 0 || BuildMode ? DisplayStyle.Flex : DisplayStyle.None;
             if (world != null && marketSummary != null)
             {

@@ -49,6 +49,8 @@ namespace NetworkCollapse
                 cameraObject.tag = "MainCamera";
                 cam = cameraObject.AddComponent<Camera>();
             }
+            if (FindAnyObjectByType<AudioListener>() == null)
+                cam.gameObject.AddComponent<AudioListener>();
             cameraController = cam.GetComponent<NetworkCameraController>();
             if (cameraController == null)
                 cameraController = cam.gameObject.AddComponent<NetworkCameraController>();

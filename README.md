@@ -99,3 +99,11 @@ Unity runtime notes: `NetworkCameraController.ResetView()` now tolerates early c
 The interface uses an original dark command-console aesthetic influenced by the legibility and workstation feel of classic 2000s network simulation games such as Uplink. It does not reuse Uplink assets or reproduce its interface. Added a top operations status bar, squared edge-lit panels, turquoise text/buttons, a coordinate grid behind the topology, and a color legend. Unity's procedural UI Toolkit screen remains runtime-generated. The editor/Web build has not yet been visually validated.
 
 Unity `.gitignore` excludes regenerated Library, Temp, Obj, Logs, build outputs, UserSettings and IDE files. Keep `Assets/*.meta`, `Packages` and `ProjectSettings` committed.
+
+## Campaign and tactical device visualization
+
+The map now draws original procedural device glyphs: router directional arrows, L3 switch crossed port grid and L2 switch port grid, in addition to status and layer colors. All glyphs are Unity LineRenderers; no external sprites or copyrighted Uplink artwork.
+
+A six-objective story campaign tracks availability, new links, repairs, upgrades, survival after a simulated outage and device configuration. Four achievements and two consumable inventory items are displayed in the operations HUD. Mission credit rewards are applied to the simulation. Campaign state currently resets when starting a new game; persistence and saved profiles remain future work. Missions and achievements are a lightweight first playable narrative, not a complete authored branching campaign.
+
+Unverified: this change has not been compiled, visually inspected or tested in the Unity Editor or Web build.

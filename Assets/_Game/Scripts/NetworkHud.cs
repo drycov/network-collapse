@@ -12,6 +12,11 @@ namespace NetworkCollapse
         private Label kpis, details, title, objectiveLabel;
         private Button repair, failure, build, upgrade, repairLink, nextLevel;
         private Label connectionInfo, eventLog;
+        private Button modeButton;
+        public bool BuildMode { get; private set; }
+        public int SelectedLinkId { get; private set; } = -1;
+        public event Action<bool> BuildModeChanged;
+        public event Action<EquipmentTier?> FilterChanged;
         private readonly System.Collections.Generic.List<string> events = new System.Collections.Generic.List<string>();
 
         public event Action<int, int> BuildLinkRequested;
@@ -33,6 +38,8 @@ namespace NetworkCollapse
         public void Initialize(NetworkSimulation simulation)
         {
             model = simulation;
+            BuildMode = false;
+            SelectedLinkId = -1;
             if (document == null)
             {
                 document = gameObject.AddComponent<UIDocument>();
@@ -61,6 +68,13 @@ namespace NetworkCollapse
             objectiveLabel = Body("");
             left.Add(objectiveLabel);
             left.Add(Heading("УПРАВЛЕНИЕ", 15));
+            modeButton = ActionButton("Режим строительства: выкл.", () => { BuildMode = !BuildMode; BuildModeChanged?.Invoke(BuildMode); Refresh(); });
+            left.Add(modeButton);
+            left.Add(Heading("ФИЛЬТР УЗЛОВ", 14));
+            left.Add(ActionButton("Все категории", () => FilterChanged?.Invoke(null)));
+            left.Add(ActionButton("Core", () => FilterChanged?.Invoke(EquipmentTier.Core)));
+            left.Add(ActionButton("Distribution", () => FilterChanged?.Invoke(EquipmentTier.Distribution)));
+            left.Add(ActionButton("Access", () => FilterChanged?.Invoke(EquipmentTier.Access)));
             left.Add(ActionButton("Случайная авария  [SPACE]", () => RandomFailureRequested?.Invoke()));
             left.Add(ActionButton("Начать заново  [R]", () => ResetRequested?.Invoke()));
             nextLevel = ActionButton("Следующий уровень", () => NextLevelRequested?.Invoke());
@@ -72,7 +86,7 @@ namespace NetworkCollapse
             left.Add(Heading("ЖУРНАЛ СОБЫТИЙ", 14));
             eventLog = Body("");
             left.Add(eventLog);
-            left.Add(Body("ЛКМ — узел\nB + ЛКМ — второй узел\nПКМ/СКМ — панорама\nКолесо — масштаб · F — центр"));
+            left.Add(Body("ЛКМ — выбрать узел или канал\nРежим строительства — выбрать два узла\nПКМ/СКМ — панорама\nКолесо — масштаб · F — центр"));
 
             var right = Panel(300);
             root.Add(right);
@@ -149,6 +163,14 @@ namespace NetworkCollapse
             if (eventLog != null) eventLog.text = string.Join("\n", events);
         }
 
+        public void SelectLink(int index)
+        {
+            SelectedId = -1;
+            TargetId = -1;
+            SelectedLinkId = index;
+            Refresh();
+        }
+
         public void SelectTarget(int id)
         {
             TargetId = id;
@@ -160,6 +182,7 @@ namespace NetworkCollapse
         public void Select(int id)
         {
             TargetId = -1;
+            SelectedLinkId = -1;
             SelectedId = id;
             Refresh();
         }
@@ -167,6 +190,7 @@ namespace NetworkCollapse
         public void Refresh()
         {
             if (model == null || kpis == null) return;
+            modeButton.text = BuildMode ? "Режим строительства: ВКЛ" : "Режим строительства: выкл.";
 
             string extra = model.GameOver ? "\n⚠ СЕТЬ РУХНУЛА" :
                 model.ObjectiveComplete ? "\n✓ Цель достигнута" : "";
@@ -201,9 +225,9 @@ namespace NetworkCollapse
             else
                 repair.text = $"Ремонт узла ({NetworkSimulation.RepairCost})";
 
-            int index = FindSelectedLink();
-            bool pair = valid && TargetId >= 0 && TargetId != SelectedId;
-            build.SetEnabled(!model.GameOver && pair && index < 0 && model.Money >= NetworkSimulation.BuildCost);
+            int index = SelectedLinkId >= 0 ? SelectedLinkId : FindSelectedLink();
+            bool pair = (valid && TargetId >= 0 && TargetId != SelectedId) || SelectedLinkId >= 0;
+            build.SetEnabled(!model.GameOver && valid && pair && index < 0 && model.Money >= NetworkSimulation.BuildCost);
             upgrade.SetEnabled(!model.GameOver && pair && index >= 0 && !model.Links[index].Failed &&
                                model.Money >= NetworkSimulation.UpgradeCost && model.Links[index].Capacity < 240);
 
@@ -215,7 +239,8 @@ namespace NetworkCollapse
             else
                 repairLink.text = $"Ремонт канала ({NetworkSimulation.LinkRepairCost})";
 
-            connectionInfo.text = !pair
+            connectionInfo.text = SelectedLinkId >= 0 && index < model.Links.Count
+                ? $"Канал #{index}: N{model.Links[index].A:00} ↔ N{model.Links[index].B:00}\nНагрузка: {model.Links[index].Load:0.0}/{model.Links[index].Capacity:0.0}\nСостояние: {(model.Links[index].Failed ? "Авария" : "Работает")}\nПостроен игроком: {(model.Links[index].PlayerBuilt ? "Да" : "Нет")}" : !pair
                 ? "Нажмите B и выберите второй узел."
                 : index < 0
                     ? $"N{SelectedId:00} → N{TargetId:00}: канала нет"
@@ -223,7 +248,7 @@ namespace NetworkCollapse
 
             if (!valid)
             {
-                title.text = "ОБОРУДОВАНИЕ";
+                title.text = SelectedLinkId >= 0 ? "КАНАЛ СВЯЗИ" : "ОБОРУДОВАНИЕ";
                 details.text = "Выберите узел на карте.\n\nДержите доступность выше цели, чтобы пройти уровень.";
                 return;
             }

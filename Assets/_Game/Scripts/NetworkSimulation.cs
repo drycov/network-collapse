@@ -87,6 +87,8 @@ namespace NetworkCollapse
         public int TickCount { get; private set; }
         public int Money { get; private set; } = 180;
         public int Customers { get; private set; } = 12;
+        public int AcquiredMaintenance { get; private set; };
+        public int AcquiredSites { get; private set; }
         public int MarketReach { get; private set; } = 1;
         public string OperatorScale => Customers >= 2000 ? "Транснациональный" : Customers >= 500 ? "Национальный" : Customers >= 120 ? "Региональный" : "Локальный ISP";
         public int EquipmentUpgrades { get; private set; }
@@ -142,6 +144,8 @@ namespace NetworkCollapse
             Customers += Mathf.Max(0, customers);
             Nodes[initialCount].Demand += customers * .12f;
             MarketReach += sites.Count;
+            AcquiredSites += sites.Count;
+            AcquiredMaintenance += Mathf.Max(1, sites.Count / 2);
             Step();
             return true;
         }
@@ -171,7 +175,7 @@ namespace NetworkCollapse
 
         [Serializable] public sealed class Snapshot
         {
-            public int Level, Money, Score, TickCount, EquipmentUpgrades, Customers, MarketReach;
+            public int Level, Money, Score, TickCount, EquipmentUpgrades, Customers, MarketReach, AcquiredMaintenance, AcquiredSites;
             public float ObjectiveProgress;
             public bool ObjectiveComplete, GameOver;
             public List<NetworkNode> Nodes = new List<NetworkNode>();
@@ -182,7 +186,7 @@ namespace NetworkCollapse
             var s = new Snapshot { Level = Level, Money = Money, Score = Score,
                 TickCount = TickCount, ObjectiveProgress = ObjectiveProgress,
                 ObjectiveComplete = ObjectiveComplete, GameOver = GameOver,
-                EquipmentUpgrades = EquipmentUpgrades, Customers = Customers, MarketReach = MarketReach };
+                EquipmentUpgrades = EquipmentUpgrades, Customers = Customers, MarketReach = MarketReach, AcquiredMaintenance = AcquiredMaintenance, AcquiredSites = AcquiredSites };
             foreach (var node in Nodes) s.Nodes.Add(UnityEngine.JsonUtility.FromJson<NetworkNode>(UnityEngine.JsonUtility.ToJson(node)));
             foreach (var link in Links) s.Links.Add(UnityEngine.JsonUtility.FromJson<NetworkLink>(UnityEngine.JsonUtility.ToJson(link)));
             return s;
@@ -200,6 +204,8 @@ namespace NetworkCollapse
             ObjectiveComplete = s.ObjectiveComplete; GameOver = s.GameOver;
             EquipmentUpgrades = Mathf.Max(0, s.EquipmentUpgrades);
             Customers = Mathf.Max(0, s.Customers == 0 && s.MarketReach == 0 ? 12 : s.Customers); MarketReach = Mathf.Max(1, s.MarketReach);
+            AcquiredMaintenance = Mathf.Max(0, s.AcquiredMaintenance);
+            AcquiredSites = Mathf.Max(0, s.AcquiredSites);
             TargetAvailability = Mathf.Clamp(.80f + Level * .015f, .80f, .93f);
             ObjectiveTimer = 70f + Level * 10f;
             Interfaces.Clear(); Subnets.Clear(); RoutingTables.Clear(); NeighborTables.Clear(); SwitchingTables.Clear(); Vlans.Clear();
@@ -570,7 +576,7 @@ namespace NetworkCollapse
             int upkeep = 1 + FailedNodes + FailedLinks / 2;
             // Early levels offer recovery time before costs and incidents escalate.
             if (Level == 1 && TickCount < 15) upkeep = Mathf.Min(upkeep, 1);
-            Money = Mathf.Max(0, Money + income + Mathf.FloorToInt(Customers * Availability / 14f) - upkeep);
+            Money = Mathf.Max(0, Money + income + Mathf.FloorToInt(Customers * Availability / 14f) - upkeep - AcquiredMaintenance);
             Score += Mathf.RoundToInt(delivered * 0.35f + Availability * 6f);
 
             // Objective

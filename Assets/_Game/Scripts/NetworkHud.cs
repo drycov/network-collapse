@@ -232,7 +232,6 @@ namespace NetworkCollapse
             var label = new Label(text);
             label.style.color = new Color(.72f, .88f, .86f);
             label.style.fontSize = 13;
-            label.style.lineHeight = 19;
             label.style.whiteSpace = WhiteSpace.Normal;
             label.style.flexShrink = 0;
             label.style.marginBottom = 10;

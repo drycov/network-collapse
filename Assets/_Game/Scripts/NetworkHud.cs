@@ -103,6 +103,7 @@ namespace NetworkCollapse
             var nav = new VisualElement();
             nav.style.flexDirection = FlexDirection.Row;
             nav.style.flexShrink = 0;
+            nav.style.minHeight = 34;
             nav.Add(TabButton("СЕТЬ", () => ShowTab("operations")));
             nav.Add(TabButton("МИССИИ", () => ShowTab("missions")));
             nav.Add(TabButton("СКЛАД", () => ShowTab("inventory")));
@@ -115,6 +116,12 @@ namespace NetworkCollapse
             left.Add(operationsTab);
             left.Add(missionsTab);
             left.Add(inventoryTab);
+            foreach (var tab in new[] { operationsTab, missionsTab, inventoryTab })
+            {
+                tab.style.flexShrink = 0;
+                tab.style.flexGrow = 0;
+                tab.style.minHeight = StyleKeyword.Auto;
+            }
             operationsTab.Add(Heading("УПРАВЛЕНИЕ", 15));
             modeButton = ActionButton("Режим строительства: выкл.", () => { BuildMode = !BuildMode; BuildModeChanged?.Invoke(BuildMode); Refresh(); });
             operationsTab.Add(modeButton);
@@ -143,7 +150,9 @@ namespace NetworkCollapse
             missionsTab.Add(missionLabel);
             missionsTab.Add(Heading("ДОСКА ЗАДАНИЙ", 14));
             boardLabel = Body(""); missionsTab.Add(boardLabel);
-            missionPicker = new VisualElement(); missionsTab.Add(missionPicker);
+            missionPicker = new VisualElement();
+            missionPicker.style.flexShrink = 0;
+            missionsTab.Add(missionPicker);
             missionsTab.Add(Heading("СВЯЗЬ С ДИСПЕТЧЕРСКОЙ", 14));
             dialogueLabel = Body(""); missionsTab.Add(dialogueLabel);
             missionsTab.Add(Heading("КАРТА ИНЦИДЕНТОВ", 14));
@@ -170,6 +179,7 @@ namespace NetworkCollapse
             details = Body("Выберите узел на карте.");
             right.Add(details);
             deviceConfigSection = new VisualElement();
+            deviceConfigSection.style.flexShrink = 0;
             right.Add(deviceConfigSection);
             deviceConfigSection.Add(Heading("КОНФИГУРАЦИЯ УСТРОЙСТВА", 14));
             vlanField = new IntegerField("VLAN ID");
@@ -212,6 +222,7 @@ namespace NetworkCollapse
             panel.style.height = Length.Percent(100);
             panel.style.maxHeight = Length.Percent(100);
             panel.style.flexShrink = 0;
+            panel.contentContainer.style.flexShrink = 0;
             // Fully opaque terminal panels (no alpha glass)
             panel.style.backgroundColor = new Color(.012f, .05f, .07f, 1f);
             panel.style.borderLeftWidth = 3;
@@ -245,6 +256,7 @@ namespace NetworkCollapse
             label.style.fontSize = 13;
             label.style.whiteSpace = WhiteSpace.Normal;
             label.style.flexShrink = 0;
+            label.style.flexGrow = 0;
             label.style.marginBottom = 10;
             return label;
         }

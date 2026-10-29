@@ -22,6 +22,11 @@ namespace NetworkCollapse
             Refresh();
         }
 
+        public void SetTutorial(string instruction)
+        {
+            if (tutorialLabel != null) tutorialLabel.text = instruction ?? string.Empty;
+        }
+
         public void ShowBriefing()
         {
             if (dialogueOverlay == null || campaign == null) return;

@@ -476,7 +476,12 @@ namespace NetworkCollapse
         }
 
 
-events);
+        public void AddEvent(string message)
+        {
+            if (string.IsNullOrEmpty(message)) return;
+            events.Insert(0, "[" + DateTime.Now.ToString("HH:mm:ss") + "] " + message);
+            if (events.Count > 35) events.RemoveAt(events.Count - 1);
+            if (eventLog != null) eventLog.text = string.Join("\n", events);
         }
 
         public void SetBuildMode(bool value)
@@ -494,7 +499,35 @@ events);
 
 
 
-itle.text = model.GameOver ? "NETWORK COLLAPSE" : "";
+        public void Refresh()
+        {
+            if (model == null || kpis == null) return;
+            if (rightDock != null && !menuOpen)
+                rightDock.style.display = SelectedId >= 0 || SelectedLinkId >= 0 || BuildMode
+                    ? DisplayStyle.Flex : DisplayStyle.None;
+            if (world != null && marketSummary != null)
+            {
+                marketSummary.text = world.Summary();
+                if (bgpTableLabel != null && marketMode == "bgp")
+                    bgpTableLabel.text = world.BgpSummary();
+            }
+            if (availabilityBar != null) availabilityBar.value = model.Availability * 100f;
+            if (objectiveBar != null)
+                objectiveBar.value = model.ObjectiveTimer <= 0f ? 0f :
+                    Mathf.Clamp01(model.ObjectiveProgress / model.ObjectiveTimer) * 100f;
+            if (alertBanner != null)
+            {
+                alertBanner.text = model.GameOver ? "КРИТИЧЕСКАЯ ПОТЕРЯ СВЯЗНОСТИ" :
+                    model.FailedNodes + model.FailedLinks > 0 ?
+                    "АКТИВНЫЕ АВАРИИ: " + (model.FailedNodes + model.FailedLinks) :
+                    "СЕТЬ РАБОТАЕТ ШТАТНО";
+                alertBanner.style.color = model.GameOver ? new Color(1f, .32f, .32f) :
+                    model.FailedNodes + model.FailedLinks > 0 ?
+                    new Color(1f, .69f, .3f) : new Color(.36f, .95f, .79f);
+            }
+            if (endingOverlay != null)
+                endingOverlay.style.display = model.GameOver ? DisplayStyle.Flex : DisplayStyle.None;
+            if (endingTitle != null) endingTitle.text = model.GameOver ? "NETWORK COLLAPSE" : "";
             endingDescription.text = model.GameOver ? "Сеть потеряла устойчивость. Восстановите управление, начав новую смену.\nИтоговый счёт: " + model.Score : "";
 
             if (campaign != null)
